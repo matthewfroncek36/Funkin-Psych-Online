@@ -19,7 +19,7 @@ class NoteSplash extends FlxSprite
 	private var _textureLoaded:String = null;
 	private var _configLoaded:String = null;
 
-	public static var defaultNoteSplash(default, never):String = 'noteSplashes/noteSplashes';
+	public static var defaultNoteSplash(get, never):String;
 	public static var configs:Map<String, NoteSplashConfig> = new Map<String, NoteSplashConfig>();
 
 	public function new(x:Float = 0, y:Float = 0) {
@@ -28,9 +28,12 @@ class NoteSplash extends FlxSprite
 		var skin:String = null;
 		if(PlayState.SONG.splashSkin != null && PlayState.SONG.splashSkin.length > 0) skin = PlayState.SONG.splashSkin;
 		else skin = defaultNoteSplash + getSplashSkinPostfix();
-		
-		rgbShader = new PixelSplashShaderRef();
-		shader = rgbShader.shader;
+
+		if (!ClientPrefs.data.disableRGBNotes)
+		{
+			rgbShader = new PixelSplashShaderRef();
+			shader = rgbShader.shader;
+		}
 		precacheConfig(skin);
 		_configLoaded = skin;
 		scrollFactor.set();
@@ -66,23 +69,34 @@ class NoteSplash extends FlxSprite
 			config = precacheConfig(_configLoaded);
 
 		var tempShader:RGBPalette = null;
-		if((note == null || note.noteSplashData.useRGBShader) && (PlayState.SONG == null || !PlayState.SONG.disableNoteRGB))
-		{
-			// If Note RGB is enabled:
-			if(note != null && !note.noteSplashData.useGlobalShader)
-			{
-				
-				if(note.noteSplashData.r != -1) note.rgbShader.r = note.noteSplashData.r;
-				if(note.noteSplashData.g != -1) note.rgbShader.g = note.noteSplashData.g;
-				if(note.noteSplashData.b != -1) note.rgbShader.b = note.noteSplashData.b;
-				tempShader = note.rgbShader.parent;
+		if (ClientPrefs.data.disableRGBNotes) {
+			try {
+				if (note.shader != null) shader = note.shader;
 			}
-			else tempShader = Note.globalRgbShaders[direction];
+			catch (e) {
+				trace(e);
+			}
+		}
+		else
+		{
+			if((note == null || note.noteSplashData.useRGBShader) && (PlayState.SONG == null || !PlayState.SONG.disableNoteRGB))
+			{
+				// If Note RGB is enabled:
+				if(note != null && !note.noteSplashData.useGlobalShader)
+				{
+					if(note.noteSplashData.r != -1) note.rgbShader.r = note.noteSplashData.r;
+					if(note.noteSplashData.g != -1) note.rgbShader.g = note.noteSplashData.g;
+					if(note.noteSplashData.b != -1) note.rgbShader.b = note.noteSplashData.b;
+					tempShader = note.rgbShader.parent;
+				}
+				else tempShader = Note.globalRgbShaders[direction];
+			}
 		}
 
 		alpha = ClientPrefs.data.splashAlpha;
 		if(note != null) alpha = note.noteSplashData.a;
-		rgbShader.copyValues(tempShader);
+		if (!ClientPrefs.data.disableRGBNotes)
+			rgbShader.copyValues(tempShader);
 
 		if(note != null) antialiasing = note.noteSplashData.antialiasing;
 		if(PlayState.isPixelStage || !ClientPrefs.data.antialiasing) antialiasing = false;
@@ -200,6 +214,10 @@ class NoteSplash extends FlxSprite
 
 		super.update(elapsed);
 	}
+
+	@:noCompletion
+	private static function get_defaultNoteSplash():String
+		return !ClientPrefs.data.disableRGBNotes ? 'noteSplashes/noteSplashes' : 'noteSplashes';
 }
 
 class PixelSplashShaderRef {

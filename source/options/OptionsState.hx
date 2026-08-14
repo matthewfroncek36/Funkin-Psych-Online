@@ -12,6 +12,7 @@ class OptionsState extends MusicBeatState
 		'main' => ['Controls', 'Performance', 'Visuals & UI', 'Game'],
 		'visuals' => ['Notes', 'Combo & Rating', 'User Interface', 'Accessibility'],
 		'game' => ['Gameplay', 'Preferences', 'Adjust Audio Delay'],
+		'mobile' => ['Mobile Extra Control', 'Mobile Options'],
 	];
 	private var grpOptionsMap:Map<String, FlxTypedGroup<Alphabet>> = new Map();
 	static var optionsCategory(default, set):String = 'main';
@@ -64,6 +65,11 @@ class OptionsState extends MusicBeatState
 	public static var loadedMod:String = '';
 
 	function openSelectedSubstate(label:String) {
+		if (label != "Adjust Delay and Combo" && label != 'Game' && label != 'Visuals & UI' && label != 'Mobile'){
+			mobileManager.removeMobilePad();
+			persistentUpdate = false;
+		}
+
 		if (optionsCategory == 'visuals') {
 			openSubState(new options.VisualsUISubState(label));
 			return;
@@ -87,8 +93,15 @@ class OptionsState extends MusicBeatState
 				optionsCategory = 'visuals';
 			case 'Game':
 				optionsCategory = 'game';
+			case 'Mobile':
+				optionsCategory = 'mobile';
 			case 'Mods':
 				FlxG.switchState(() -> new ModsMenuState());
+			case 'Mobile Options':
+				openSubState(new mobile.options.MobileOptionsSubState());
+			case 'Mobile Extra Control':
+				controls.isInSubstate = true;
+				openSubState(new mobile.substates.MobileExtraControl());
 		}
 	}
 
@@ -142,12 +155,13 @@ class OptionsState extends MusicBeatState
 		if (!onPlayState)
 			optionsMap.get('main').push('Mods');
 		#end
+		optionsMap.get('main').push('Mobile');
 
 		for (category => items in optionsMap) {
 			var group = new FlxTypedGroup<Alphabet>();
 
 			for (i in 0...items.length) {
-				var optionText:Alphabet = new Alphabet(0, 0, items[i], true);
+				var optionText:Alphabet = new Alphabet(0, 0, Language.getText(items[i]), true);
 				optionText.screenCenter();
 				optionText.y += (100 * (i - (items.length / 2))) + 50;
 				group.add(optionText);
@@ -166,6 +180,7 @@ class OptionsState extends MusicBeatState
 
 		super.create();
 
+		mobileManager.addMobilePad("UP_DOWN", "A_B");
 		online.GameClient.send("status", "In the Game Options");
 	}
 
@@ -173,6 +188,10 @@ class OptionsState extends MusicBeatState
 		super.closeSubState();
 		FlxG.mouse.visible = true;
 		ClientPrefs.saveSettings();
+		controls.isInSubstate = false;
+		mobileManager.removeMobilePad();
+		mobileManager.addMobilePad('UP_DOWN', 'A_B');
+		persistentUpdate = true;
 	}
 
 	var forceUpdateNext:Bool = true;
@@ -185,7 +204,7 @@ class OptionsState extends MusicBeatState
 		if (controls.UI_DOWN_P) {
 			changeSelection(1);
 		}
-		
+
 		if (FlxG.mouse.deltaScreenY != 0 || forceUpdateNext) {
 			for (i => spr in grpOptions) {
 				if (FlxG.mouse.overlaps(spr, spr.camera) && i - curSelected != 0) {
@@ -222,7 +241,7 @@ class OptionsState extends MusicBeatState
 				optionsCategory = 'main';
 			}
 		}
-		else if (controls.ACCEPT || FlxG.mouse.justPressed) openSelectedSubstate(options[curSelected]);
+		else if (controls.ACCEPT || FlxG.mouse.justPressed && controls.mobileControls) openSelectedSubstate(options[curSelected]);
 	}
 	
 	function changeSelection(change:Int = 0) {

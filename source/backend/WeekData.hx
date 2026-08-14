@@ -126,29 +126,68 @@ class WeekData {
 						}
 					}
 				}
+
+				// CNE XML week fallback
+				var xmlFileToCheck:String = directories[j] + 'weeks/' + sexList[i] + '.xml';
+				if(!weeksLoaded.exists(sexList[i])) {
+					var week:WeekFile = getWeekFileXML(xmlFileToCheck);
+					if(week != null) {
+						var weekFile:WeekData = new WeekData(week, sexList[i]);
+
+						#if MODS_ALLOWED
+						if(j >= originalLength) {
+							weekFile.folder = directories[j].substring(Paths.mods().length, directories[j].length-1);
+						}
+						#end
+
+						if (
+							weekFile != null && (
+								(/*online.GameClient.isConnected() &&*/ !isStoryMode) ||
+								((isStoryMode && !weekFile.hideStoryMode) || (!isStoryMode && !weekFile.hideFreeplay))
+							)
+						) {
+							weeksLoaded.set(sexList[i], weekFile);
+							weeksList.push(sexList[i]);
+						}
+					}
+				}
 			}
 		}
 
 		#if MODS_ALLOWED
 		for (i in 0...directories.length) {
 			var directory:String = directories[i] + 'weeks/';
-			if(FileSystem.exists(directory)) {
+			if(FunkinFileSystem.exists(directory)) {
 				var listOfWeeks:Array<String> = CoolUtil.coolTextFile(directory + 'weekList.txt');
 				for (daWeek in listOfWeeks)
 				{
 					var path:String = directory + daWeek + '.json';
-					if(sys.FileSystem.exists(path))
+					if(FunkinFileSystem.exists(path))
 					{
 						addWeek(isStoryMode, daWeek, path, directories[i], i, originalLength);
 					}
+
+					// CNE XML week fallback
+					var xmlPath:String = directory + daWeek + '.xml';
+					if(!weeksLoaded.exists(daWeek) && FunkinFileSystem.exists(xmlPath))
+					{
+						addWeekXML(isStoryMode, daWeek, xmlPath, directories[i], i, originalLength);
+					}
 				}
 
-				for (file in FileSystem.readDirectory(directory))
+				for (file in FunkinFileSystem.readDirectory(directory))
 				{
 					var path = haxe.io.Path.join([directory, file]);
-					if (!sys.FileSystem.isDirectory(path) && file.endsWith('.json'))
+					if (file.endsWith('.json'))
 					{
 						addWeek(isStoryMode, file.substr(0, file.length - 5), path, directories[i], i, originalLength);
+					}
+					// CNE XML week fallback
+					if (file.endsWith('.xml'))
+					{
+						var weekName = file.substr(0, file.length - 4);
+						if(!weeksLoaded.exists(weekName))
+							addWeekXML(isStoryMode, weekName, path, directories[i], i, originalLength);
 					}
 				}
 			}
@@ -182,16 +221,7 @@ class WeekData {
 	}
 
 	private static function getWeekFile(path:String):WeekFile {
-		var rawJson:String = null;
-		#if MODS_ALLOWED
-		if(FileSystem.exists(path)) {
-			rawJson = File.getContent(path);
-		}
-		#else
-		if(OpenFlAssets.exists(path)) {
-			rawJson = Assets.getText(path);
-		}
-		#end
+		var rawJson:String = FunkinFileSystem.getText(path);
 
 		if(rawJson != null && rawJson.length > 0) {
 			try {
@@ -203,6 +233,49 @@ class WeekData {
 			}
 		}
 		return null;
+	}
+
+	/**
+	 * Loads a CNE week XML file and converts it to WeekFile format.
+	 */
+	private static function getWeekFileXML(path:String):WeekFile {
+		var rawXml:String = FunkinFileSystem.getText(path);
+
+		if(rawXml != null && rawXml.length > 0) {
+			try {
+				return Converters.parseCodenameWeek(rawXml);
+			}
+			catch (exc) {
+				trace('Error parsing CNE week XML: $exc');
+				trace(rawXml);
+			}
+		}
+		return null;
+	}
+
+	private static function addWeekXML(isStoryMode:Bool, weekToCheck:String, path:String, directory:String, i:Int, originalLength:Int)
+	{
+		if(!weeksLoaded.exists(weekToCheck))
+		{
+			var week:WeekFile = getWeekFileXML(path);
+			if(week != null)
+			{
+				var weekFile:WeekData = new WeekData(week, weekToCheck);
+				if(i >= originalLength)
+				{
+					#if MODS_ALLOWED
+					weekFile.folder = directory.substring(Paths.mods().length, directory.length-1);
+					#end
+				}
+				if(
+					(/*online.GameClient.isConnected() &&*/ !isStoryMode) ||
+					((isStoryMode && !weekFile.hideStoryMode) || (!isStoryMode && !weekFile.hideFreeplay)))
+				{
+					weeksLoaded.set(weekToCheck, weekFile);
+					weeksList.push(weekToCheck);
+				}
+			}
+		}
 	}
 
 	//   FUNCTIONS YOU WILL PROBABLY NEVER NEED TO USE

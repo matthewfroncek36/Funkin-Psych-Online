@@ -74,7 +74,7 @@ class SideUI extends WSprite {
 
 		instance = this;
 
-		for (file in FileSystem.readDirectory('assets/images/sidebar')) {
+		for (file in FunkinFileSystem.readDirectory('assets/images/sidebar')) {
 			Paths.excludeAsset('assets/images/sidebar/' + file);
 		}
 
@@ -86,9 +86,6 @@ class SideUI extends WSprite {
 
 	function init(?e:Event) {
 		alpha = 0;
-
-		mouseEnabled = false;
-		mouseChildren = false;
 
 		var bg = new Bitmap(new BitmapData(Lib.application.window.width, Lib.application.window.height, true, 0x8E000000));
 		addChild(bg);
@@ -192,16 +189,10 @@ class SideUI extends WSprite {
 
 			if (active) {
 				for (i => button in tabButtons) {
-					if (!tabButtonsUnderlay[i].overlapsMouse())
-						continue;
-
-					if (tabs[i].locked) {
-						Alert.alert('This tab is inaccessible!');
+					if (tabButtonsUnderlay[i].overlapsMouse()) {
+						curTabIndex = i;
 						break;
 					}
-
-					curTabIndex = i;
-					break;
 				}
 				curTab.mouseDown(e);
 			}
@@ -256,10 +247,6 @@ class SideUI extends WSprite {
 			tip.y = welcome.y;
 
 			curTab.onShowOnline();
-
-			for (i => button in tabButtons) {
-				button.alpha = tabs[i].locked ? 0.5 : 1;
-			}
 		}
 
 		function onOffline() {
@@ -273,14 +260,7 @@ class SideUI extends WSprite {
 			tip.y = welcome.y;
 
 			curTab.onShowOffline();
-
-			for (i => button in tabButtons) {
-				button.alpha = tabs[i].locked ? 0.5 : 1;
-			}
 		}
-
-		mouseEnabled = active;
-		mouseChildren = active;
 
 		if (active) {
 			tabUI.addChild(curTab);

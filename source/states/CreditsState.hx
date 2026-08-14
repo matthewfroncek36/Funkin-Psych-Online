@@ -23,6 +23,9 @@ class CreditsState extends MusicBeatState
 
 	var offsetThing:Float = -75;
 
+	var inputBuffer:String = "";
+    var secretCode:String = "FUCK";
+
 	override function create()
 	{
 		#if DISCORD_ALLOWED
@@ -44,6 +47,10 @@ class CreditsState extends MusicBeatState
 		#end
 
 		var defaultList:Array<Array<String>> = [ //Name - Icon name - Description - Link - BG Color
+			['Psych Extended Team'],
+			['KralOyuncu & ArkoseLabs',	 'arkoselabs',	'Creators of Psych Extended Online',					'https://youtube.com/@arkoselabsofficial',		'95240E'],
+			['Ethantobot',	 'face',	'Tester & Helper of Psych Extended Online',					'https://youtube.com/@ethanpater548',		'24ED13'],
+			[''],
 			['Psych Online'],
 			['Snirozu', 'snirozu', 'helo i made this mod :)', 'https://sniro.boo', 'FFCC33'],
 			['Til', 'til', 'Code Contributor with over 30 commits!\nDeveloper of the upcoming Mobile Port', 'https://techniktil.tilnotdrip.org', 'FFFF00'],
@@ -144,11 +151,46 @@ class CreditsState extends MusicBeatState
 		bg.color = CoolUtil.colorFromString(creditsStuff[curSelected][4]);
 		intendedColor = bg.color;
 		changeSelection();
+		mobileManager.addMobilePad('UP_DOWN', 'A_B');
 		super.create();
 	}
 
 	var quitting:Bool = false;
 	var holdTime:Float = 0;
+	function changeCreditName(oldName:String, newName:String)
+    {
+        for (i in 0...creditsStuff.length)
+        {
+            if (creditsStuff[i][0] == oldName) {
+                creditsStuff[i][0] = newName;
+
+                var item = grpOptions.members[i];
+                if (item is Alphabet) {
+                    cast(item, Alphabet).text = newName;
+                } else if (item is online.objects.AlphaLikeText) {
+                    cast(item, online.objects.AlphaLikeText).text = newName;
+                }
+
+                if(iconArray[i] != null) {
+                    iconArray[i].xAdd = cast(item, FlxSprite).width + 10;
+                }
+            }
+        }
+    }
+	function changeCreditDesc(name:String, newDesc:String)
+	{
+		for (i in 0...creditsStuff.length)
+		{
+			if (creditsStuff[i][0] == name) {
+				creditsStuff[i][2] = newDesc;
+				if (curSelected == i) {
+					descText.text = newDesc;
+					descBox.setGraphicSize(Std.int(descText.width + 20), Std.int(descText.height + 25));
+					descBox.updateHitbox();
+				}
+			}
+		}
+	}
 	override function update(elapsed:Float)
 	{
 		if (FlxG.sound.music.volume < 0.7)
@@ -158,6 +200,20 @@ class CreditsState extends MusicBeatState
 
 		if(!quitting)
 		{
+			if (FlxG.keys.justPressed.ANY) {
+                var lastKey:String = flixel.input.keyboard.FlxKey.toStringMap.get(FlxG.keys.firstJustPressed());
+                inputBuffer += lastKey;
+
+                if (inputBuffer.length > 20) inputBuffer = inputBuffer.substring(1);
+
+                if (inputBuffer.endsWith(secretCode)) {
+					changeCreditName("Snirozu", "Sikirozu");
+					changeCreditDesc("Sikirozu", "Amına keee :)");
+                    FlxG.sound.play(Paths.sound('confirmMenu'));
+                    inputBuffer = "";
+                }
+            }
+
 			if(creditsStuff.length > 1)
 			{
 				var shiftMult:Int = 1;
@@ -301,9 +357,9 @@ class CreditsState extends MusicBeatState
 		if(folder != null && folder.trim().length > 0) creditsFile = Paths.mods(folder + '/data/credits.txt');
 		else creditsFile = Paths.mods('data/credits.txt');
 
-		if (FileSystem.exists(creditsFile))
+		if (FunkinFileSystem.exists(creditsFile))
 		{
-			var firstarray:Array<String> = File.getContent(creditsFile).split('\n');
+			var firstarray:Array<String> = FunkinFileSystem.getText(creditsFile).split('\n');
 			for(i in firstarray)
 			{
 				var arr:Array<String> = i.replace('\\n', '\n').split("::");

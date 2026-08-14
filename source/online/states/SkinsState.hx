@@ -1,8 +1,5 @@
 package online.states;
 
-import online.states.DownloaderState.ModProvider;
-import flixel.input.keyboard.FlxKey;
-import backend.InputFormatter;
 import objects.HealthIcon;
 import flixel.FlxSubState;
 import flixel.FlxObject;
@@ -46,6 +43,8 @@ class SkinsState extends MusicBeatState {
 
 	static var flipped:Bool = false;
 
+	final accept:String = (Controls.instance.mobileControls) ? "A" : "ACCEPT";
+
 	static var backClass:Class<Dynamic>;
 
 	var reloadedState:Bool = false;
@@ -80,6 +79,7 @@ class SkinsState extends MusicBeatState {
 
 	var stageCrowd:FlxAnimate;
 	var stageSpeakers:FlxAnimate;
+	var defaultGirlfriend:FlxAnimate;
 	var camFollow:FlxObject;
 	// static var introPlayed:Bool = false;
 
@@ -217,6 +217,14 @@ class SkinsState extends MusicBeatState {
 			stageSpeakers.scrollFactor.set(0.95, 0.95);
 			add(stageSpeakers);
 
+			defaultGirlfriend = new FlxAnimate(-80, 440);
+			Paths.loadAnimateAtlas(defaultGirlfriend, 'charSelect/gfChill');
+			defaultGirlfriend.antialiasing = ClientPrefs.data.antialiasing;
+			defaultGirlfriend.anim.addBySymbol('beat', 'GIRLFRIEND CS', 24, true);
+			defaultGirlfriend.anim.play('beat');
+			defaultGirlfriend.scrollFactor.set(0.95, 0.95);
+			add(defaultGirlfriend);
+
 			stageObjects = [stageBg, stageCrowd, stage, swageLight1, swageLight2, stageCurtain, stageSpeakers];
 		}
 
@@ -241,7 +249,7 @@ class SkinsState extends MusicBeatState {
 			}
 
 			// if characters/ folder doesn't exist--skip
-			if (!FileSystem.exists(characters)) {
+			if (!FunkinFileSystem.exists(characters)) {
 				continue;
 			}
 
@@ -261,7 +269,7 @@ class SkinsState extends MusicBeatState {
 				charSkipSearch.push(characterName + leftSuffix);
 				charSkipSearch.push(characterName + rightSuffix);
 
-				if (FileSystem.exists(Path.join([
+				if (FunkinFileSystem.exists(Path.join([
 					charactersWeeks,
 					characterName + ".json"
 				]))) {
@@ -276,13 +284,13 @@ class SkinsState extends MusicBeatState {
 			}
 
 			//iterate over all characters/
-			for (file in FileSystem.readDirectory(characters)) {
+			for (file in FunkinFileSystem.readDirectory(characters)) {
 				var filePath = Path.join([characters, file]);
 				// strip .json from character filename to get charactername
 				var character:String = file.substr(0, file.length - 5);
 
 				//skip blacklisted or non-character files
-				if (charSkipSearch.contains(character) || sys.FileSystem.isDirectory(filePath) || !file.endsWith('.json')) {
+				if (charSkipSearch.contains(character) || !file.endsWith('.json')) {
 					continue;
 				}
 
@@ -301,12 +309,12 @@ class SkinsState extends MusicBeatState {
 
 						var leftSuffix = '';
 						for (opponentSuffix in LEFT_SUFFIX) {
-							if (FileSystem.exists(Path.join([characters, '${cutCharName + opponentSuffix}.json']))) {
+							if (FunkinFileSystem.exists(Path.join([characters, '${cutCharName + opponentSuffix}.json']))) {
 								leftSuffix += opponentSuffix;
 							}
 						}
 
-						if (FileSystem.exists(Path.join([characters, '${cutCharName}.json']))) {
+						if (FunkinFileSystem.exists(Path.join([characters, '${cutCharName}.json']))) {
 							hasAdded = addCharacter(cutCharName, leftSuffix, playableSuffix, origin);
 							break;
 						}
@@ -322,12 +330,12 @@ class SkinsState extends MusicBeatState {
 						
 						var rightSuffix = '';
 						for (playableSuffix in RIGHT_SUFFIX) {
-							if (FileSystem.exists(Path.join([characters, '${cutCharName + playableSuffix}.json']))) {
+							if (FunkinFileSystem.exists(Path.join([characters, '${cutCharName + playableSuffix}.json']))) {
 								rightSuffix += playableSuffix;
 							}
 						}
 
-						if (FileSystem.exists(Path.join([characters, '${cutCharName + rightSuffix}.json']))) {
+						if (FunkinFileSystem.exists(Path.join([characters, '${cutCharName + rightSuffix}.json']))) {
 							hasAdded = addCharacter(cutCharName, opponentSuffix, rightSuffix, origin);
 							break;
 						}
@@ -401,7 +409,7 @@ class SkinsState extends MusicBeatState {
 		add(arrowRight);
 
 		charSelect = new FlxText(0, 0, FlxG.width);
-		charSelect.text = 'Press ACCEPT to select!';
+		charSelect.text = 'Press $accept to select!';
 		charSelect.setFormat("VCR OSD Mono", 20, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		charSelect.y = barDown.y + barDown.height / 2 - charSelect.height / 2;
 		charSelect.alpha = 0.8;
@@ -409,7 +417,7 @@ class SkinsState extends MusicBeatState {
 		add(charSelect);
 
 		charInfo = new FlxText(0, 0, FlxG.width);
-		charInfo.text = '';
+		charInfo.text = 'Sample';
 		charInfo.setFormat("VCR OSD Mono", 19, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		charInfo.y = barDown.y + (charSelect.y - barDown.y) / 2 - charInfo.height / 2;
 		charInfo.alpha = 0.6;
@@ -417,21 +425,29 @@ class SkinsState extends MusicBeatState {
 		charInfo.visible = false;
 		add(charInfo);
 
+		final fuckurself:String = (controls.mobileControls) ? "Use Arrow Buttons while pressing X to move!" : "Use Note keybinds while pressing SHIFT to move!";
+
 		var swagText = new FlxText(0, charSelect.y + charSelect.height + 5, FlxG.width);
-		swagText.text = 'Use Note keybinds while pressing SHIFT to move!';
+		swagText.text = fuckurself;
 		swagText.setFormat("VCR OSD Mono", 18, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		swagText.alpha = 0.8;
 		swagText.cameras = [hud];
 		add(swagText);
 
-		var tip1 = new FlxText(20, 0, FlxG.width, 'TAB - Flip skin\n8 - Edit skin\nCTRL - Open the Character List');
+		final tab:String = (controls.mobileControls) ? "C" : "TAB";
+		final eight:String = (controls.mobileControls) ? "D" : "8";
+		final ctrl:String = (controls.mobileControls) ? "V" : "CTRL";
+		var tip1 = new FlxText(20, 0, FlxG.width, '$tab - Flip skin\n$eight - Edit skin\n$ctrl - Open the Character List');
 		tip1.setFormat("VCR OSD Mono", 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		tip1.y = charSelect.y - 10;
 		tip1.alpha = 0.5;
 		tip1.cameras = [hud];
 		add(tip1);
 
-		var tip2 = new FlxText(-20, 0, FlxG.width, InputFormatter.getKeyName(cast(ClientPrefs.keyBinds.get('fav')[0], FlxKey)) + ' - Favorite skin\nF2 to Browse GB Skins Category\nF1 for Help!');
+		var f1:String = (controls.mobileControls) ? "Y" : "F1";
+		var f2:String = (controls.mobileControls) ? "Z" : "F2";
+		var f3:String = (controls.mobileControls) ? "?" : "F3";
+		var tip2 = new FlxText(-20, 0, FlxG.width, '$f1 for Help!\n$f2 to Browse Verified Skins\n$f3 to Browse GB Skins Category');
 		tip2.setFormat("VCR OSD Mono", 16, FlxColor.WHITE, RIGHT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		tip2.y = tip1.y;
 		tip2.alpha = tip1.alpha;
@@ -448,6 +464,9 @@ class SkinsState extends MusicBeatState {
 		super.create();
 		
 		CustomFadeTransition.nextCamera = hud; // wat
+
+		mobileManager.addMobilePad('FULL', 'A_B_C_D_V_X_Y_Z');
+		mobileManager.addMobilePadCamera();
 
 		GameClient.send("status", "Selecting their skin");
     }
@@ -495,7 +514,7 @@ class SkinsState extends MusicBeatState {
 			Conductor.songPosition = music.time;
 		}
 
-        if (FlxG.keys.pressed.SHIFT) {
+        if (mobileButtonPressed('X') || FlxG.keys.pressed.SHIFT) {
 			if (character.members[0] != null) {
 				if (controls.NOTE_UP) {
 					character.members[0].playAnim("singUP");
@@ -524,10 +543,11 @@ class SkinsState extends MusicBeatState {
 			}
         }
 
-		if (FlxG.keys.justPressed.CONTROL) {
+		if (mobileButtonJustPressed('V') || FlxG.keys.justPressed.CONTROL) {
 			if (selectTimer != null)
 				selectTimer.active = false;
 
+			mobileManager.mobilePad.visible = false;
 			// daCopy[0] = "Default";
 
 			var charList = [];
@@ -557,6 +577,7 @@ class SkinsState extends MusicBeatState {
 					selectTimer.active = true;
 				curCharacter = indexesOfCharacters[i];
 				setCharacter(0);
+				mobileManager.removeMobilePad();
 				return true;
 			});
 			selState.iconCallback = i -> {
@@ -644,7 +665,7 @@ class SkinsState extends MusicBeatState {
 				charSelect.alpha = 1;
 			}
 			else {
-				charSelect.text = 'Press ACCEPT to select!';
+				charSelect.text = 'Press $accept to select!';
 				charSelect.alpha = 0.8;
 			}
 			if (acceptSound != null)
@@ -664,12 +685,12 @@ class SkinsState extends MusicBeatState {
 			});
 		}
 
-		if (FlxG.keys.justPressed.EIGHT && curCharacter != -1) {
+		if ((mobileButtonJustPressed('D') || FlxG.keys.justPressed.EIGHT) && curCharacter != -1) {
 			Mods.currentModDirectory = charactersList[curCharacter][3];
 			switchState(() -> new CharacterEditorState(getCharacterName(curCharacter), false, true));
 		}
 
-		if (FlxG.keys.justPressed.TAB) {
+		if (mobileButtonJustPressed('C') || FlxG.keys.justPressed.TAB) {
 			flipped = !flipped;
 			prevCharacter = null;
 			setCharacter(0);
@@ -677,7 +698,7 @@ class SkinsState extends MusicBeatState {
 			// LoadingState.loadAndSwitchState(new SkinsState());
 		}
 
-		if (FlxG.keys.justPressed.F1) {
+		if (mobileButtonJustPressed('Y') || FlxG.keys.justPressed.F1) {
 			switch (Main.repoHost) {
 				case 'github':
 					RequestSubstate.requestURL("https://github.com/Snirozu/Funkin-Psych-Online/wiki#skins", true);
@@ -688,35 +709,12 @@ class SkinsState extends MusicBeatState {
 			}
 		}
 
-		if (FlxG.keys.pressed.ALT && FlxG.keys.justPressed.F2) {
-			switchState(() -> new DownloaderState('collection:110039', ModProvider.GB));
+		if (mobileButtonJustPressed('Z') || FlxG.keys.justPressed.F2) {
+			switchState(() -> new DownloaderState('collection:110039'));
 		}
 
-		if (!FlxG.keys.pressed.ALT && FlxG.keys.justPressed.F2) {
-			switchState(() -> new DownloaderState('category:43788', ModProvider.GB));
-		}
-
-		if (controls.FAV && curCharacter >= 0) {
-			final charId = charactersList[curCharacter][0] + ':' + charactersList[curCharacter][3];
-
-			if (ClientPrefs.data.favSkins.contains(charId)) {
-				ClientPrefs.data.favSkins.remove(charId);
-				unfavSound.volume = 1;
-				unfavSound.play(true);
-
-				if (character.members[0] != null)
-					character.members[0].playAnim("hurt", true);
-			}
-			else {
-				ClientPrefs.data.favSkins.push(charId);
-				favSound.volume = 1;
-				favSound.play(true);
-
-				if (character.members[0] != null)
-					character.members[0].playAnim("hey", true);
-			}
-			updateTexts();
-			ClientPrefs.saveSettings();
+		if (FlxG.keys.justPressed.F3) {
+			switchState(() -> new DownloaderState('category:43788'));
 		}
 
 		if (controls.RESET) {
@@ -797,6 +795,10 @@ class SkinsState extends MusicBeatState {
 		persistentUpdate = true;
 
 		super.closeSubState();
+		if (mobileManager.mobilePad != null)
+			mobileManager.removeMobilePad();
+		mobileManager.addMobilePad('FULL', 'A_B_C_D_V_X_Y_Z');
+		mobileManager.addMobilePadCamera();
 	}
 
 	override function destroy() {
@@ -910,10 +912,6 @@ class SkinsState extends MusicBeatState {
 			tweenColor(FlxColor.fromRGB(255, 255, 255));
 		}
 
-		updateTexts();
-    }
-
-	function updateTexts() {
 		title.text = curCharacter == -1 ? "(NONE)" : charactersList[curCharacter][0].replace('-', ' ');
 		title.x = FlxG.width / 2 - title.width / 2;
 
@@ -927,21 +925,11 @@ class SkinsState extends MusicBeatState {
 		}
 
 		charInfo.visible = false;
-		charInfo.text = '';
-
 		if (charactersWithWeeks.contains(curCharacter)) {
-			charInfo.text = 'This Character has custom MIXES!';
+			charInfo.text = 'This character has custom MIXES!';
 			charInfo.visible = true;
 		}
-
-		if (charactersList[curCharacter] != null) {
-			final charId = charactersList[curCharacter][0] + ':' + charactersList[curCharacter][3];
-			if (ClientPrefs.data.favSkins.contains(charId)) {
-				charInfo.text += (charInfo.text.length > 0 ? ' ' : '') + '(Favorite Character)';
-				charInfo.visible = true;
-			}
-		}
-	}
+    }
 
 	var colorTweens:Array<FlxTween> = [];
 	function tweenColor(hueColor:FlxColor) {

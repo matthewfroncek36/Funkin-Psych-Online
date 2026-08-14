@@ -23,7 +23,6 @@ class FunkinNetwork {
 	public static var avgAccuracy(default, null):Float = 0;
 	public static var profileHue(default, null):Float = 0;
 	public static var loggedIn:Bool = false;
-	public static var access:Array<String> = [];
 
 	public static function requestLogin(email:String, ?code:String) {
 		var response = requestAPI({
@@ -99,7 +98,6 @@ class FunkinNetwork {
 		points = json.points;
 		avgAccuracy = json.avgAccuracy;
 		profileHue = json.profileHue;
-		access = json.access;
 		loggedIn = true;
 		NetworkClient.connect();
 		return loggedIn;
@@ -232,39 +230,6 @@ class FunkinNetwork {
 		}
 	}
 
-	public static function searchMods(query:String, page:Int, sort:String):Array<PEOMod> {
-		var response = requestAPI("/api/search/mods?q=" + StringTools.urlEncode(query ?? '') + "&page=" + page + (sort != null ? '&sort=' + sort : ''));
-
-		if (response == null)
-			return null;
-
-		try {
-			return Json.parse(response.getString());
-		}
-		catch (exc) {
-			trace(exc);
-			return null;
-		}
-	}
-
-	public static function fetchMod(id:String):PEOModDetailed {
-		if (id == null)
-			return null;
-
-		var response = requestAPI("/api/mod/details/" + StringTools.urlEncode(id));
-
-		if (response == null)
-			return null;
-
-		try {
-			return Json.parse(response.getString());
-		}
-		catch (exc) {
-			trace(exc);
-			return null;
-		}
-	}
-
 	public static function fetchUserInfo(user:String):Dynamic {
 		if (user == null)
 			return null;
@@ -354,43 +319,4 @@ class FunkinNetwork {
 
 		return response;
 	}
-
-	public static function hasAccess(to:String) {
-		for (perm in access)
-			if (matchWildcard(perm, to))
-				return true;
-		return false;
-	}
-
-	private static function matchWildcard(wildString:String, to:String) {
-		final wildIndex = wildString.indexOf('*');
-		if (wildIndex == -1)
-			return wildString == to;
-		return wildString.substr(0, wildIndex) == to.substr(0, wildIndex);
-	}
-}
-
-typedef PEOMod = {
-	id: String,
-	images: Array<String>,
-	title: String,
-	keywords: Array<String>,
-	downloadHits: Float,
-	favoritedCount: Float,
-}
-
-typedef PEOModDetailed = {
-	>PEOMod,
-	submitted: String,
-	favorited: Array<String>,
-	description: String,
-	downloads: Array<PEOModDownload>,
-}
-
-typedef PEOModDownload = {
-	id: String,
-	urls: Array<String>,
-	hits: Float,
-	size: Float,
-	modID: String
 }

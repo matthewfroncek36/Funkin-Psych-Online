@@ -1,6 +1,5 @@
 package substates;
 
-import online.s3d.View3DHandler;
 import online.GameClient;
 import online.util.ShitUtil;
 import online.substates.PostTextSubstate;
@@ -44,10 +43,11 @@ class PauseSubState extends MusicBeatSubstate
 
 	public function new(x:Float, y:Float)
 	{
+		controls.isInSubstate = true;
 		super();
 
 		if (!GameClient.isConnected()) {
-			menuItemsOG = ['Resume', 'Restart Song', 'Change Difficulty', 'Options', 'Exit to menu'];
+			menuItemsOG = ['Resume', 'Restart Song', 'Chart Editor', 'Change Difficulty', 'Options', 'Exit to menu'];
 
 			if(Difficulty.list.length < 2) menuItemsOG.remove('Change Difficulty'); //No need to change difficulty if there is only one!
 
@@ -74,11 +74,6 @@ class PauseSubState extends MusicBeatSubstate
 
 			if (ClientPrefs.isDebug()) {
 				menuItemsOG.insert(3, 'Debug Tools');
-				oof++;
-			}
-
-			if (online.network.FunkinNetwork.hasAccess('/api/admin/song/submit') && PlayState.instance.netSong != null) {
-				menuItemsOG.insert(3, 'Verify Song');
 				oof++;
 			}
 
@@ -140,13 +135,13 @@ class PauseSubState extends MusicBeatSubstate
 		levelDifficulty.updateHitbox();
 		add(levelDifficulty);
 
-		var blueballedTxt:FlxText = new FlxText(20, 15 + 64, 0, "Retry No. " + PlayState.deathCounter, 32);
+		var blueballedTxt:FlxText = new FlxText(20, 15 + 64, 0, Language.getText("Retry No. ") + PlayState.deathCounter, 32);
 		blueballedTxt.scrollFactor.set();
 		blueballedTxt.setFormat(Paths.font('vcr.ttf'), 32);
 		blueballedTxt.updateHitbox();
 		add(blueballedTxt);
 
-		practiceText = new FlxText(20, 15 + 101, 0, "PRACTICE MODE", 32);
+		practiceText = new FlxText(20, 15 + 101, 0, Language.getText("PRACTICE MODE"), 32);
 		practiceText.scrollFactor.set();
 		practiceText.setFormat(Paths.font('vcr.ttf'), 32);
 		practiceText.x = FlxG.width - (practiceText.width + 20);
@@ -154,7 +149,7 @@ class PauseSubState extends MusicBeatSubstate
 		practiceText.visible = PlayState.instance.practiceMode;
 		add(practiceText);
 
-		var chartingText:FlxText = new FlxText(20, 15 + 101, 0, "CHARTING MODE", 32);
+		var chartingText:FlxText = new FlxText(20, 15 + 101, 0, Language.getText("CHARTING MODE"), 32);
 		chartingText.scrollFactor.set();
 		chartingText.setFormat(Paths.font('vcr.ttf'), 32);
 		chartingText.x = FlxG.width - (chartingText.width + 20);
@@ -198,7 +193,11 @@ class PauseSubState extends MusicBeatSubstate
 
 		regenMenu();
 		//cameras = [FlxG.cameras.list[FlxG.cameras.list.length - 1]];
-		cameras = [PlayState.instance.camOther];
+		//cameras = [PlayState.instance.camOther];
+		cameras = [FlxG.cameras.list[FlxG.cameras.list.length - 1]]; //mobilePad cameras has a more priority, so use this instead
+
+		mobileManager.addMobilePad(menuItems.contains('Skip Time') ? 'FULL' : 'UP_DOWN', 'A_B');
+		mobileManager.addMobilePadCamera();
 	}
 
 	var holdTime:Float = 0;
@@ -333,6 +332,8 @@ class PauseSubState extends MusicBeatSubstate
 				case "Restart Song":
 					PlayState.deathCounter++;
 					restartSong();
+				case 'Chart Editor':
+					PlayState.instance.openChartEditor();
 				case "Leave Charting Mode":
 					PlayState.deathCounter = 0;
 					restartSong();
@@ -426,7 +427,7 @@ class PauseSubState extends MusicBeatSubstate
 						'Swing Mode'
 					];
 					if (PlayState.instance.stage3D != null)
-						menuItems.insert(1, 'Stage 3D Editor');
+						menuItems.insert(1, 'Stage 3D Debug');
 					if (!PlayState.chartingMode)
 						menuItems.insert(2, 'Charting Mode');
 					menuItems.push('Back');
@@ -435,9 +436,9 @@ class PauseSubState extends MusicBeatSubstate
 				case 'Swap Sides':
 					PlayState.instance.toggleOpponentMode();
 					close();
-				case 'Stage 3D Editor': 
+				case 'Stage 3D Debug': 
 					close();
-					View3DHandler.instance.debugMode = !View3DHandler.instance.debugMode;
+					// Main.view3D.debugMode = !Main.view3D.debugMode;
 				case 'Position Debug': 
 					PlayState.instance.debugPoser.editMode = !PlayState.instance.debugPoser.editMode;
 					close();
@@ -463,8 +464,6 @@ class PauseSubState extends MusicBeatSubstate
 						var hs = new psychlua.HScript(null, text);
 						Alert.alert(hs.returnValue);
 					}));
-				case 'Verify Song':
-					online.network.Leaderboard.submitSong(PlayState.instance.netSong);
 				case 'Back':
 					menuItems = menuItemsOG;
 					regenMenu();
@@ -505,6 +504,7 @@ class PauseSubState extends MusicBeatSubstate
 
 	override function destroy()
 	{
+		controls.isInSubstate = false;
 		if (pauseMusic != null)
 			pauseMusic.destroy();
 
@@ -521,6 +521,9 @@ class PauseSubState extends MusicBeatSubstate
 			curSelected = menuItems.length - 1;
 		if (curSelected >= menuItems.length)
 			curSelected = 0;
+
+		#if SCRIPTING_ALLOWED call('onSelectItem', [curSelected]); #end
+		#if SCRIPTING_ALLOWED call('changeSelection', [curSelected]); #end
 
 		var bullShit:Int = 0;
 
@@ -560,7 +563,7 @@ class PauseSubState extends MusicBeatSubstate
 		skipTimeTracker = null;
 
 		for (i in 0...menuItems.length) {
-			var item = new Alphabet(90, 320, menuItems[i], true);
+			var item = new Alphabet(90, 320, Language.getText(menuItems[i]), true);
 			item.isMenuItem = true;
 			item.targetY = i;
 			grpMenuShit.add(item);

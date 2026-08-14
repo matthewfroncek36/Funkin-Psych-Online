@@ -25,6 +25,7 @@ typedef DialogueLine = {
 	var boxState:Null<String>;
 	var speed:Null<Float>;
 	var sound:Null<String>;
+	var color:Null<String>;
 }
 
 // TO DO: Clean code? Maybe? idk
@@ -164,7 +165,7 @@ class DialogueBoxPsych extends FlxSpriteGroup
 			bgFade.alpha += 0.5 * elapsed;
 			if(bgFade.alpha > 0.5) bgFade.alpha = 0.5;
 
-			if(Controls.instance.ACCEPT) {
+			if(Controls.instance.ACCEPT #if mobile || ScreenUtil.touch.justPressed #end) {
 				if(!daText.finishedText) {
 					daText.finishText();
 					if(skipDialogueThing != null) {
@@ -355,6 +356,14 @@ class DialogueBoxPsych extends FlxSpriteGroup
 		daText.delay = curDialogue.speed;
 		daText.sound = curDialogue.sound;
 		if(daText.sound == null || daText.sound.trim() == '') daText.sound = 'dialogue';
+
+		// Apply CNE dialogue color if specified
+		if(curDialogue.color != null && curDialogue.color.trim().length > 0) {
+			var colorStr:String = StringTools.trim(curDialogue.color);
+			if(colorStr.startsWith("#")) colorStr = colorStr.substr(1);
+			var colorInt:Null<Int> = Std.parseInt("0x" + colorStr);
+			if(colorInt != null) daText.color = colorInt;
+		}
 		
 		daText.y = DEFAULT_TEXT_Y;
 		if(daText.rows > 2) daText.y -= LONG_TEXT_ADD;
@@ -377,13 +386,22 @@ class DialogueBoxPsych extends FlxSpriteGroup
 	}
 
 	public static function parseDialogue(path:String):DialogueFile {
-		#if MODS_ALLOWED
-		if(FileSystem.exists(path))
-		{
-			return cast Json.parse(File.getContent(path));
+		var text:Null<String> = FunkinFileSystem.getText(path);
+		if (text != null && text.length > 0) {
+			// Try JSON first (Psych Engine format)
+			try {
+				return cast Json.parse(text);
+			} catch (e) {
+				// JSON parsing failed, try CNE XML format
+			}
+			// Try CNE XML dialogue format
+			try {
+				return backend.Converters.parseCodenameDialogue(text);
+			} catch (e) {
+				trace('Failed to parse dialogue as JSON or CNE XML: $path');
+			}
 		}
-		#end
-		return cast Json.parse(Assets.getText(path));
+		return null;
 	}
 
 	public static function updateBoxOffsets(box:FlxSprite) { //Had to make it static because of the editors

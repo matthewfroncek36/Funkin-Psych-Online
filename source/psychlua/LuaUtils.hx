@@ -132,12 +132,12 @@ class LuaUtils
 
 		var settings:Map<String, Dynamic> = FlxG.save.data.modSettings.get(modName);
 		var path:String = Paths.mods('$modName/data/settings.json');
-		if(FileSystem.exists(path))
+		if(FunkinFileSystem.exists(path))
 		{
 			if(settings == null || !settings.exists(saveTag))
 			{
 				if(settings == null) settings = new Map<String, Dynamic>();
-				var data:String = File.getContent(path);
+				var data:String = FunkinFileSystem.getText(path);
 				try
 				{
 					//FunkinLua.luaTrace('getModSetting: Trying to find default value for "$saveTag" in Mod: "$modName"');
@@ -339,18 +339,18 @@ class LuaUtils
 		}
 	}
 
-	public static function resetTextTag(tag:String):FlxText {
+	public static function resetTextTag(tag:String) {
 		#if LUA_ALLOWED
 		if(!PlayState.instance.modchartTexts.exists(tag)) {
-			return null;
+			return;
 		}
 
 		var target:FlxText = PlayState.instance.modchartTexts.get(tag);
+		target.kill();
 		PlayState.instance.remove(target, true);
+		target.destroy();
 		PlayState.instance.modchartTexts.remove(tag);
-		return target;
 		#end
-		return null;
 	}
 
 	public static function resetSpriteTag(tag:String) {

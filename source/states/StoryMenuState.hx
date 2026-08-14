@@ -182,6 +182,8 @@ class StoryMenuState extends MusicBeatState
 		changeWeek();
 		changeDifficulty();
 
+		mobileManager.addMobilePad('FULL', 'A_B_X_Y');
+
 		super.create();
 	}
 
@@ -189,6 +191,8 @@ class StoryMenuState extends MusicBeatState
 		persistentUpdate = true;
 		changeWeek();
 		super.closeSubState();
+		mobileManager.removeMobilePad();
+		mobileManager.addMobilePad('FULL', 'A_B_X_Y');
 	}
 
 	override function update(elapsed:Float)
@@ -241,12 +245,12 @@ class StoryMenuState extends MusicBeatState
 			else if (upP || downP)
 				changeDifficulty();
 
-			if(FlxG.keys.justPressed.CONTROL)
+			if(mobileButtonJustPressed('X') || FlxG.keys.justPressed.CONTROL)
 			{
 				persistentUpdate = false;
 				openSubState(new GameplayChangersSubstate());
 			}
-			else if(controls.RESET)
+			else if(mobileButtonJustPressed('Y') || controls.RESET)
 			{
 				persistentUpdate = false;
 				openSubState(new ResetScoreSubState('', curDifficulty, '', curWeek));
@@ -401,10 +405,9 @@ class StoryMenuState extends MusicBeatState
 		var unlocked:Bool = !weekIsLocked(leWeek.fileName);
 		for (num => item in grpWeekText.members)
 		{
-			if (num == curWeek && unlocked)
+			item.alpha = 0.6;
+			if (num - curWeek == 0 && unlocked)
 				item.alpha = 1;
-			else
-				item.alpha = 0.6;
 		}
 
 		bgSprite.visible = true;

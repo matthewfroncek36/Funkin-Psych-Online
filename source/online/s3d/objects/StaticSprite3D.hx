@@ -15,9 +15,6 @@ class StaticSprite3D extends Mesh {
 			throw 'Bitmap not provided and is null!';
 
 		if (bitmap == null) {
-			var graphic = Paths.image(props.image /*, null, false*/);
-			if (graphic == null)
-				throw props.image + ' image doesn\'t exist!';
 			bitmap = Paths.image(props.image /*, null, false*/).bitmap;
 		}
 
@@ -41,7 +38,7 @@ class StaticSprite3D extends Mesh {
 		var geom = new PlaneGeometry(
 			props.geomWidth ?? (props.completeSize ? bitmap.width * props.scaleUV : 1), 
 			props.geomHeight ?? (props.completeSize ? bitmap.height * props.scaleUV : 1),
-			props.segmentsW ?? 1, props.segmentsH ?? 1, false, props.bothSides
+			1, 1, false, props.bothSides
 		);
 		if (props.scaleUV != 1.0)
 			geom.scaleUV(geom.width / (bitmap.width * props.scaleUV), geom.height / (bitmap.height * props.scaleUV));

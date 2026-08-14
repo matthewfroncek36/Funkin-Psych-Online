@@ -3,6 +3,7 @@ package backend;
 import objects.Note;
 import tjson.TJSON as Json;
 import lime.utils.Assets;
+import backend.Converters;
 
 #if sys
 import sys.io.File;
@@ -10,6 +11,15 @@ import sys.FileSystem;
 #end
 
 import backend.Section;
+
+typedef StrumLine =
+{
+	var visible:Bool; //WIP Logic
+	var position:String; //WIP Logic
+	var characters:Array<String>;
+	var cpu:Bool;
+	var type:Int; //WIP Logic
+}
 
 typedef SwagSong =
 {
@@ -42,6 +52,9 @@ typedef SwagSong =
 
 	//psych engine 1.0
 	@:optional var format:String;
+
+	//codename engine legacy (WIP)
+	@:optional var strumLines:Array<StrumLine>;
 }
 
 class Song
@@ -132,38 +145,87 @@ class Song
 	}
 
 	public static function loadRawSong(jsonInput:String, ?folder:String):String {
-		var rawJson = null;
+		try {
+			var isEvent:Bool = jsonInput.startsWith('events');
+			var lastDashIndex = jsonInput.lastIndexOf('-');
+			var difficulty = jsonInput.substring(lastDashIndex + 1);
+			var songName = isEvent ? PlayState.SONG.song : jsonInput.substring(0, lastDashIndex);
+			var chartsFolder:String = isEvent ? 'events' : 'charts/${difficulty}';
 
-		var formattedFolder:String = Paths.formatToSongPath(folder);
-		var formattedSong:String = Paths.formatToSongPath(jsonInput);
-		#if MODS_ALLOWED
-		var moddyFile:String = Paths.modsJson(formattedFolder + '/' + formattedSong);
-		if (FileSystem.exists(moddyFile)) {
-			rawJson = File.getContent(moddyFile).trim();
-		}
-		#end
+			if (Paths.formatToSongPath(difficulty) == Paths.formatToSongPath(Difficulty.defaultDifficulty))
+				difficulty = Difficulty.defaultDifficulty; 
 
-		if (rawJson == null) {
-			#if sys
-			if (FileSystem.exists(Paths.json(formattedFolder + '/' + formattedSong)))
-				rawJson = File.getContent(Paths.json(formattedFolder + '/' + formattedSong));
-			#else
-			rawJson = Assets.getText(Paths.json(formattedFolder + '/' + formattedSong));
+			var formattedFolder:String = Paths.formatToSongPath(folder);
+			var formattedSong:String = Paths.formatToSongPath(jsonInput);
+			var rawJson:String = null;
+
+			#if MODS_ALLOWED
+			var modSongPath = Paths.modsJson('$formattedFolder/$formattedSong');
+			var modCneChartPath = Paths.modFolders('songs/$songName/$chartsFolder.json');
+			var modCneMetaPath = Paths.modFolders('songs/$songName/meta-$difficulty.json');
+
+			if (!FunkinFileSystem.exists(modCneMetaPath))
+				modCneMetaPath = Paths.modFolders('songs/$songName/meta.json');
+
+			trace(modCneMetaPath);
+
+
+			if (FunkinFileSystem.exists(modCneChartPath)) {
+				var chartData = Json.parse(FunkinFileSystem.getText(modCneChartPath).trim());
+				var metaData = Json.parse(FunkinFileSystem.getText(modCneMetaPath).trim());
+				rawJson = Converters.parseCodenameChart(chartData, metaData, isEvent);
+			} else if (FunkinFileSystem.exists(modSongPath)) {
+				rawJson = FunkinFileSystem.getText(modSongPath).trim();
+			}
 			#end
 
 			if (rawJson == null) {
-				throw new haxe.Exception("Missing file: " + Paths.json(formattedFolder + '/' + formattedSong));
+				var baseSongPath = Paths.json('$formattedFolder/$formattedSong');
+				var baseCneChartPath = Paths.getPath('songs/$songName/$chartsFolder.json', TEXT, null, true);
+				var baseCneMetaPath = Paths.getPath('songs/$songName/meta-$difficulty.json', TEXT, null, true);
+
+				if (!FunkinFileSystem.exists(baseCneMetaPath))
+					baseCneMetaPath = Paths.getPath('songs/$songName/meta.json', TEXT, null, true);
+
+				if (FunkinFileSystem.exists(baseCneChartPath)) {
+					var chartData = Json.parse(FunkinFileSystem.getText(baseCneChartPath));
+					var metaData = Json.parse(FunkinFileSystem.getText(baseCneMetaPath));
+					rawJson = Converters.parseCodenameChart(chartData, metaData, isEvent);
+				} else if (FunkinFileSystem.exists(baseSongPath)) {
+					rawJson = FunkinFileSystem.getText(baseSongPath);
+				}
+
+				if (rawJson == null)
+					throw new haxe.Exception('Missing file: $baseSongPath');
+
+				rawJson = rawJson.trim();
 			}
 
-			rawJson = rawJson.trim();
-		}
+			while (rawJson != null && !rawJson.endsWith("}")) {
+				rawJson = rawJson.substr(0, rawJson.length - 1);
+			}
 
-		while (!rawJson.endsWith("}")) {
-			rawJson = rawJson.substr(0, rawJson.length - 1);
-			// LOL GOING THROUGH THE BULLSHIT TO CLEAN IDK WHATS STRANGE
-		}
+			return rawJson;
 
-		return rawJson;
+		} catch(e:Dynamic) { 
+			trace('Error loading raw song: $e');
+			//this should fix no data problem.
+			return "
+				{
+				  'events': [],
+				  'song': '',
+				  'notes': [],
+				  'bpm': 0,
+				  'needsVoices': true,
+				  'speed': 1,
+				  'player1': '',
+				  'player2': '',
+				  'gfVersion': '',
+				  'stage': '',
+				  'format': 'psych_legacy'
+				}
+			";
+		}
 	}
 
 	public static function loadFromJson(jsonInput:String, ?folder:String):SwagSong
@@ -228,12 +290,8 @@ class Song
 	}
 
 	public static function updateManiaKeys(songData:SwagSong, ?noUpdate:Bool = false):Int {
-		if (songData == null) {
-			if (noUpdate)
-				return 4;
-			else
-				return Note.maniaKeys = 4;
-		}
+		if (songData == null)
+			return Note.maniaKeys = 4;
 		
 		var keys = null;
 

@@ -5,6 +5,19 @@ import states.FreeplayState;
 class GameplaySettingsSubState extends BaseOptionsMenu
 {
 	function openGameOptions() {
+		/* Psych Extended Stuffs */
+		var option:Option = new Option('Old Camera System',
+			"If checked, game uses old camera system instead of new one.\n(If you have a any camera issue, enable or disable this)",
+			'oldCameraSystem',
+			'bool');
+		addOption(option);
+
+		var option:Option = new Option('Alternative Camera',
+			"If checked, camera updates directly instead of waiting to next section",
+			'alterCamera',
+			'bool');
+		addOption(option);
+
 		//I'd suggest using "Downscroll" as an example for making your own option since it is the simplest here
 		var option:Option = new Option('Downscroll', //Name
 			'If checked, notes go Down instead of Up, simple enough.', //Description
@@ -183,12 +196,6 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		option.onChange = () -> {
 			states.TitleState.playFreakyMusic();
 		};
-		addOption(option);
-
-		var option:Option = new Option('Disable Character Sounds',
-			'Disables the sounds of character animations',
-			'disableAnimAudio',
-			'bool');
 		addOption(option);
 
 		var option:Option = new Option('Debug Mode',

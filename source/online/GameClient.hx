@@ -326,10 +326,6 @@ class GameClient {
 
 	@:access(io.colyseus.Room.onMessageHandlers)
 	public static function clearOnMessage() {
-		// clear waiter queue to avoid tasks that want to access stuff from the previous state
-		// and then lead to a crash
-		Waiter.clearStateQueue();
-
 		if (!GameClient.isConnected() || GameClient.room?.onMessageHandlers == null)
 			return;
 
@@ -354,6 +350,10 @@ class GameClient {
 		clearCallbacks(GameClient.room.state);
 		// clearCallbacks(GameClient.room.state, "diffList");
 		// clearCallbacks(GameClient.room.state, "gameplaySettings");
+
+		// clear waiter queue to avoid tasks that want to access stuff from the previous state
+		// and then lead to a crash
+		Waiter.stateQueue = [];
 		
 		ChatBox.tryRegisterLogs();
 
@@ -480,6 +480,8 @@ class GameClient {
 	}
 
 	public static function send(type:Dynamic, ?message:Null<Dynamic>) {
+		if (type == "status") message = Language.getText(message); //why not?
+
 		if (GameClient.isConnected() && type != null)
 			Waiter.putPersist(() -> {
 				try {

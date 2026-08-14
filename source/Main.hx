@@ -45,6 +45,7 @@ class Main extends Sprite
 	public static var fpsVar:FPS;
 
 	public static var PSYCH_ONLINE_VERSION(default, null):String = null;
+	public static var PSYCH_EXTENDED_VERSION(default, null):String = "0.1.0";
 	public static final CLIENT_PROTOCOL:Float = 11;
 	public static final NETWORK_PROTOCOL:Float = 8;
 	public static final GIT_COMMIT:String = online.backend.Macros.getGitCommitHash();
@@ -71,7 +72,7 @@ class Main extends Sprite
 
 	public static function main():Void
 	{
-		// cpp.vm.Profiler.start("profiler.txt");
+		#if !mobile
 		if (Path.normalize(Sys.getCwd()) != Path.normalize(lime.system.System.applicationDirectory)) {
 			Sys.setCwd(lime.system.System.applicationDirectory);
 
@@ -84,29 +85,57 @@ class Main extends Sprite
 				Sys.exit(1);
 			}
 		}
+		#end
 		
 		// Lib.current.addChild(view3D = new online.away.View3DHandler());
-		var alertSprite = new online.gui.Alert();
+		Lib.current.addChild(new online.gui.Alert());
 		Lib.current.addChild(new online.gui.LoadingScreen());
 		
 		var daMain = new Main();
 		Lib.current.addChild(daMain);
 		Lib.current.setChildIndex(daMain, 0);
 		Lib.current.addChild(new online.gui.sidebar.SideUI());
-		Lib.current.addChild(alertSprite);
 	}
 
 	public function new()
 	{
 		super();
+		#if mobile
+		#if android
+		StorageUtil.initExternalStorageDirectory(); //do not make this jobs everytime
+		StorageUtil.requestPermissions();
+		StorageUtil.chmod(2777, AndroidContext.getExternalFilesDir() + '/mods');
+		StorageUtil.chmod(2777, AndroidContext.getExternalFilesDir() + '/replays');
+		StorageUtil.chmod(2777, AndroidContext.getExternalFilesDir() + '/core'); //allow ability to change core files of engine (saveData)
+		StorageUtil.copySpesificFileFromAssets('mobile/storageModes.txt', StorageUtil.getCustomStoragePath());
+		#end
+		Sys.setCwd(StorageUtil.getStorageDirectory());
+		#end
+		backend.CrashHandler.init();
+
+		#if ios
+		CoolUtil.showPopUp("trace 1", "none");
+		#end
 
 		if (stage != null)
 		{
+			#if ios
+			CoolUtil.showPopUp("trace -1", "none");
+			#end
 			init();
+			#if ios
+			CoolUtil.showPopUp("trace -4", "none");
+			#end
 		}
 		else
 		{
+			#if ios
+			CoolUtil.showPopUp("trace -2", "none");
+			#end
 			addEventListener(Event.ADDED_TO_STAGE, init);
+			#if ios
+			CoolUtil.showPopUp("trace -3", "none");
+			#end
 		}
 	}
 
@@ -122,6 +151,7 @@ class Main extends Sprite
 
 	private function setupGame():Void
 	{
+		#if !mobile
 		var stageWidth:Int = Lib.current.stage.stageWidth;
 		var stageHeight:Int = Lib.current.stage.stageHeight;
 
@@ -133,8 +163,23 @@ class Main extends Sprite
 			game.width = Math.ceil(stageWidth / game.zoom);
 			game.height = Math.ceil(stageHeight / game.zoom);
 		}
+		#end
+
+		#if ios
+		CoolUtil.showPopUp("trace 2", "none");
+		#end
 
 		CoolUtil.setDarkMode(true);
+
+		#if ios
+		CoolUtil.showPopUp("trace 3", "none");
+		#end
+
+		FunkinFileSystem.validateLimeCache();
+
+		#if ios
+		CoolUtil.showPopUp("trace 4", "none");
+		#end
 
 		#if lumod
 		Lumod.addons.push(online.backend.LuaModuleSwap.LumodModuleAddon);
@@ -143,7 +188,7 @@ class Main extends Sprite
 
 			// check if script exists in any of loaded mods
 			var path:String = Paths.modFolders(defaultPath);
-			if (FileSystem.exists(path))
+			if (FunkinFileSystem.exists(path))
 				return path;
 
 			return defaultPath;
@@ -152,16 +197,38 @@ class Main extends Sprite
 		Lumod.initializeLuaCallbacks = false;
 		#end
 
+		#if ios
+		CoolUtil.showPopUp("trace 5", "none");
+		#end
+
 		#if hl
 		sys.ssl.Socket.DEFAULT_VERIFY_CERT = false;
 		#end
 	
 		#if LUA_ALLOWED Lua.set_callbacks_function(cpp.Callable.fromStaticFunction(psychlua.CallbackHandler.call)); #end
+		#if ios
+		CoolUtil.showPopUp("trace 6", "none");
+		#end
 		Controls.instance = new Controls();
+		#if ios
+		CoolUtil.showPopUp("trace 7", "none");
+		#end
 		ClientPrefs.loadDefaultKeys();
+		#if ios
+		CoolUtil.showPopUp("trace 8", "none");
+		#end
 		addChild(new FlxGame(game.width, game.height, game.initialState, #if (flixel < "5.0.0") game.zoom, #end game.framerate, game.framerate, game.skipSplash, game.startFullscreen));
+		#if ios
+		CoolUtil.showPopUp("trace 9", "none");
+		#end
 
-		#if !mobile
+		#if GLOBAL_SCRIPT
+		funkin.backend.scripting.HScript.GlobalScript.init();
+		#end
+		#if ios
+		CoolUtil.showPopUp("trace 10", "none");
+		#end
+
 		fpsVar = new FPS(10, 3, 0xFFFFFF);
 		addChild(fpsVar);
 		Lib.current.stage.align = "tl";
@@ -169,7 +236,6 @@ class Main extends Sprite
 		if(fpsVar != null) {
 			fpsVar.visible = ClientPrefs.data.showFPS;
 		}
-		#end
 
 		#if linux
 		Lib.current.stage.window.setIcon(Image.fromFile("icon.png"));
@@ -179,13 +245,11 @@ class Main extends Sprite
 		FlxG.autoPause = false;
 		FlxG.mouse.visible = false;
 		#end
-		
-		//haxe errors caught by openfl
-		Lib.current.loaderInfo.uncaughtErrorEvents.addEventListener(UncaughtErrorEvent.UNCAUGHT_ERROR, (e) -> {
-			onCrash(e.error);
-		});
-		//internal c++ exceptions
-		untyped __global__.__hxcpp_set_critical_error_handler(onCrash);
+
+		#if android FlxG.android.preventDefaultKeys = [BACK]; #end
+		#if mobile
+		ScreenUtil.wideScreen.enabled = ClientPrefs.data.wideScreen;
+		#end
 
 		#if DISCORD_ALLOWED
 		DiscordClient.initialize();
@@ -193,7 +257,9 @@ class Main extends Sprite
 
 		// shader coords fix
 		FlxG.signals.gameResized.add(function (w, h) {
-		     if (FlxG.cameras != null) {
+		     if(fpsVar != null)
+				fpsVar.positionFPS(10, 3, Math.min(w / FlxG.width, h / FlxG.height));
+			 if (FlxG.cameras != null) {
 			   for (cam in FlxG.cameras.list) {
 				@:privateAccess
 				if (cam != null && cam.filters != null)
@@ -388,14 +454,8 @@ class Main extends Sprite
 
 		alertMsg += exc + "\n";
 		daError += CallStack.toString(callStack) + "\n";
-		if (exc is Exception) {
-			final excStackStr = cast(exc, Exception).stack.toString();
-			if (excStackStr.trim().length > 0)
-				daError += "\n" + excStackStr + '\n';
-		}
-		if (online.backend.Waiter.waiterReports.length > 0){
-			daError += "\n" + online.backend.Waiter.waiterReports.trim();
-		}
+		if (exc is Exception)
+			daError += "\n" + cast(exc, Exception).stack.toString() + "\n";
 		alertMsg += daError;
 		alertMsg += "\n\nCommit: " + GIT_COMMIT + "\n";
 		alertMsg += "Version: " + PSYCH_ONLINE_VERSION + (TitleState.mustUpdate ? ' (OUTDATED)' : '') + "\n";
@@ -438,17 +498,17 @@ class Main extends Sprite
 			switch (Main.repoHost) {
 				case 'github':
 					alertMsg += "\nDo you wish to report this error on GitHub?";
-					alertMsg += "\nPress Yes to draft a new GitHub bug report";
+					alertMsg += "\nPress Yes to draft a new GitHub issue";
 					alertMsg += "\nPress No to jump into the origin error point (on GitHub)";
 					WinAPI.ask("Uncaught Exception!", alertMsg, () -> { // yes
-						final version = '${Main.PSYCH_ONLINE_VERSION} ([$GIT_COMMIT]($cookUrl))';
-						FlxG.openURL('https://github.com/Snirozu/Funkin-Psych-Online/issues/new?template=bugs.yml&title=${StringTools.urlEncode('Exception: ${exc}')}&terminal=${StringTools.urlEncode(daError)}&version=${StringTools.urlEncode(version)}');
+						daError += '\nVersion: ${Main.PSYCH_ONLINE_VERSION} ([$GIT_COMMIT]($cookUrl))';
+						FlxG.openURL('https://github.com/Snirozu/Funkin-Psych-Online/issues/new?title=${StringTools.urlEncode('Exception: ${exc}')}&body=${StringTools.urlEncode(daError)}');
 					}, () -> { // no
 						FlxG.openURL(cookUrl);
 					});
 				case 'codeberg':
 					alertMsg += "\nDo you wish to report this error on Codeberg?";
-					alertMsg += "\nPress Yes to draft a new Codeberg bug report";
+					alertMsg += "\nPress Yes to draft a new Codeberg issue";
 					alertMsg += "\nPress No to jump into the origin error point (on Codeberg)";
 					WinAPI.ask("Uncaught Exception!", alertMsg, () -> { // yes
 						daError += '\nVersion: ${Main.PSYCH_ONLINE_VERSION} ([$GIT_COMMIT]($cookUrl))';

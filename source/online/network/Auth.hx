@@ -21,17 +21,7 @@ class Auth {
     public static function load() {		
 		savePath = lime.system.System.applicationStorageDirectory + 'peo_auth.json';
 
-		//migrate old path
-		var legacyPath = Path.normalize(savePath).replace(
-			FlxG.stage.application.meta.get('company') + '/' + FlxG.stage.application.meta.get('file')
-			, 'ShadowMario/PsychEngine');
-		if (FileSystem.exists(legacyPath)) {
-			File.saveContent(savePath, File.getContent(legacyPath));
-			FileSystem.deleteFile(legacyPath);
-			trace('migrated auth data');
-		}
-
-		if (!FileSystem.exists(savePath))
+		if (!FunkinFileSystem.exists(savePath))
 			generateSave();
 
 		try {
@@ -61,7 +51,7 @@ class Auth {
     }
 
 	public static function generateSave() {
-		if (!FileSystem.exists(Path.directory(savePath)))
+		if (!FunkinFileSystem.exists(Path.directory(savePath)))
 			FileSystem.createDirectory(Path.directory(savePath));
 
 		File.saveContent(savePath, Json.stringify({
@@ -76,6 +66,17 @@ class Auth {
 
 		if ((saveData.id == null || saveData.token == null) && FileSystem.exists(savePath))
 			FileSystem.deleteFile(savePath);
+		
+		#if mobile
+		if (saveData.id == null || saveData.token == null) {
+			saveData = {
+				id: authID,
+				token: authToken,
+			}
+		}
+		File.saveContent(savePath, Json.stringify(saveData));
+		trace("Saved Auth Credentials...");
+		#end
     }
 
 	public static function saveClose() {

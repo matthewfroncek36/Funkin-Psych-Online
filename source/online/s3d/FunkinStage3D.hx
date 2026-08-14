@@ -1,6 +1,5 @@
 package online.s3d;
 
-import flx3d.FlxSprite3D;
 import online.s3d.objects.PersonCameraController;
 import openfl.display.BitmapData;
 import backend.StageData;
@@ -15,9 +14,9 @@ import away3d.cameras.Camera3D;
 import flx3d.FlxGroup3D;
 
 class FunkinStage3D extends FlxGroup3D {
-	public var stageData:StageFile;
+	var stageData:StageFile;
 	
-	public var cameraPoints:Map<String, Object3DPose> = new Map();
+	var cameraPoints:Map<String, Object3DPose> = new Map();
 	var cameraLens:PerspectiveLens;
 
 	var debugMode:Bool = false;
@@ -28,10 +27,8 @@ class FunkinStage3D extends FlxGroup3D {
 	// but @:optional var objects3D:Array<Dynamic>;
 
 	public function new(?stageData:StageFile) {
-		// away3d.debug.Debug.active = true;
-
 		//override existing view3d
-		view = view2 = new View3DHandler(this);
+		view = view2 = new View3DHandler();
 
 		super();
 
@@ -100,46 +97,23 @@ class FunkinStage3D extends FlxGroup3D {
 		else
 			new StaticSprite3D(object, bitmap);
 		sprite.id = objectName;
-		applyDataToSprite(object, sprite);
-		view.scene.addChild(sprite);
-		return sprite;
-	}
-
-	override public function add(sprite:FlxSprite, ?keep2D:Bool = false):FlxSprite3D {
-		final sprite = super.add(sprite, keep2D);
-		var object = stageData.stage3D.objects.get(sprite.id);
-		applyDataToSprite(object, sprite);
-		return sprite;
-	}
-
-	public function applyDataToSprite(object:StageObject3D, sprite:ObjectContainer3D) {
-		if (object == null || sprite == null)
-			return;
-
 		if (object.scale != null) {
-			if (object.scale is Float) untyped {
-				object.scale = [object.scale, object.scale, object.scale];
-			}
-			sprite.scaleX = object.scale[0] ?? 1.0;
-			sprite.scaleY = object.scale[1] ?? 1.0;
-			sprite.scaleZ = object.scale[2] ?? 1.0;
+			sprite.scaleX = object.scale ?? 1.0;
+			sprite.scaleY = object.scale ?? 1.0;
 		}
 		setPositionFromArray(sprite, object.position);
 		setRotationFromArray(sprite, object.rotation);
+		view.scene.addChild(sprite);
+
+		return sprite;
 	}
 
 	var _cameraFollow:Object3D;
 
 	var _cameraPointAlts:Map<String, Array<String>> = new Map();
 
-	var _cameraLastChar:String = null;
 	public function setFollowCamera(char:String, ?object:Object3D) {
 		object ??= _cameraFollow;
-
-		if (_cameraLastChar == char) {
-			return;
-		}
-		_cameraLastChar = char;
 
 		var cameraPoint = cameraPoints.get(char);
 		if (cameraPoint == null)
@@ -182,9 +156,6 @@ class FunkinStage3D extends FlxGroup3D {
 	}
 
 	function lerpCameraVar(a:Float, b:Float) {
-		if (!ClientPrefs.data.camMovement) {
-			return b;
-		}
 		// uses the camera lerp calc from psych engine v0.5
 		return FlxMath.lerp(a, b, elapsed * 2.4 * PlayState.instance.cameraSpeed * PlayState.instance.playbackRate);
 	}

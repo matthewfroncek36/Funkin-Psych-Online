@@ -22,6 +22,7 @@ class ResetScoreSubState extends MusicBeatSubstate
 	// Week -1 = Freeplay
 	public function new(song:String, difficulty:Int, character:String, week:Int = -1)
 	{
+		controls.isInSubstate = true;
 		this.song = song;
 		this.difficulty = difficulty;
 		this.week = week;
@@ -40,7 +41,7 @@ class ResetScoreSubState extends MusicBeatSubstate
 		add(bg);
 
 		var tooLong:Float = (name.length > 18) ? 0.8 : 1; //Fucking Winter Horrorland
-		var text:Alphabet = new Alphabet(0, 180, "Reset the score of", true);
+		var text:Alphabet = new Alphabet(0, 180, Language.getText("Reset the score of"), true);
 		text.screenCenter(X);
 		alphabetArray.push(text);
 		text.alpha = 0;
@@ -63,17 +64,20 @@ class ResetScoreSubState extends MusicBeatSubstate
 			add(icon);
 		}
 
-		yesText = new Alphabet(0, text.y + 150, 'Yes', true);
+		yesText = new Alphabet(0, text.y + 150, Language.getText('Yes'), true);
 		yesText.screenCenter(X);
 		yesText.x -= 200;
 		yesText.scrollFactor.set();
 		add(yesText);
-		noText = new Alphabet(0, text.y + 150, 'No', true);
+		noText = new Alphabet(0, text.y + 150, Language.getText('No'), true);
 		noText.screenCenter(X);
 		noText.x += 200;
 		noText.scrollFactor.set();
 		add(noText);
 		updateOptions();
+
+		mobileManager.addMobilePad('LEFT_RIGHT', 'A_B');
+		mobileManager.addMobilePadCamera();
 	}
 
 	override function update(elapsed:Float)
@@ -94,6 +98,7 @@ class ResetScoreSubState extends MusicBeatSubstate
 		}
 		if(controls.BACK) {
 			FlxG.sound.play(Paths.sound('cancelMenu'), 1);
+			controls.isInSubstate = false;
 			close();
 		} else if(controls.ACCEPT) {
 			if(onYes) {
@@ -104,6 +109,7 @@ class ResetScoreSubState extends MusicBeatSubstate
 				}
 			}
 			FlxG.sound.play(Paths.sound('cancelMenu'), 1);
+			controls.isInSubstate = false;
 			close();
 		}
 		super.update(elapsed);

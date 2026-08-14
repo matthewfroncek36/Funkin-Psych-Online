@@ -13,13 +13,10 @@ class PersonCameraController extends Sprite {
     @:isVar public var focused(get, set):Bool;
     @:isVar public var enabled(default, set):Bool = true;
     public var camera:Camera3D;
-	var _lastCursorVisible:Null<Bool> = null;
+	var _lastCursorVisible:Bool = false;
 
 	public function new(camera:Camera3D) {
 		super();
-
-		mouseEnabled = false;
-		mouseChildren = false;
 
 		this.camera = camera;
 
@@ -58,7 +55,7 @@ class PersonCameraController extends Sprite {
 		Lib.application.window.warpMouse(Std.int(Lib.application.window.width / 2), Std.int(Lib.application.window.height / 2));
 	}
 
-	override function __enterFrame(_delta:Int) {
+	override function __enterFrame(_delta:#if ANGLE_BUILD Float #else Int #end) {
 		super.__enterFrame(_delta);
 
 		wrapCameraRotation();
@@ -135,11 +132,10 @@ class PersonCameraController extends Sprite {
 		if (!enabled)
 			return focused = false;
 
-		if (v) {
+		if (v)
 			centerMouse();
-			_lastCursorVisible = FlxG.mouse.visible;
-		}
-		FlxG.mouse.visible = v ? false : _lastCursorVisible != null ? _lastCursorVisible : FlxG.mouse.visible;
+		_lastCursorVisible = FlxG.mouse.visible;
+		FlxG.mouse.visible = !_lastCursorVisible ? false : !v;
 		// Lib.application.window.mouseLock = v;
 		return focused = v;
 	}

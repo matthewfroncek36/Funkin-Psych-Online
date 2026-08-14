@@ -34,7 +34,7 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 		antialiasingOption = optionsArray.length-1;
 
 		var option:Option = new Option('Shaders', //Name
-			"If unchecked, disables shaders.\nIt's used for some visual effects, and also CPU intensive for weaker PCs.", //Description
+			"If unchecked, disables shaders.\nIt's used for some visual effects, and also CPU intensive for weaker devices.", //Description
 			'shaders',
 			'bool');
 		addOption(option);
@@ -81,12 +81,6 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 		var option:Option = new Option('Combo Stacking',
 			"If unchecked, Ratings and Combo won't stack, saving on System Memory a little and making them easier to read",
 			'comboStacking',
-			'bool');
-		addOption(option);
-
-		var option:Option = new Option('Filter Script Functions',
-			"If checked, only create-like functions will be run for scripts, preventing more frequent code to not be run.",
-			'filterScriptFunctions',
 			'bool');
 		addOption(option);
 

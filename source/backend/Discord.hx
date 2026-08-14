@@ -5,8 +5,12 @@ import Sys.sleep;
 import sys.thread.Thread;
 import lime.app.Application;
 
+#if !android
 import hxdiscord_rpc.Discord;
 import hxdiscord_rpc.Types;
+#else
+import mobile.android.AndroidRPC;
+#end
 
 import flixel.util.FlxStringUtil;
 
@@ -17,9 +21,13 @@ import online.GameClient;
 class DiscordClient
 {
 	public static var isInitialized:Bool = false;
-	private inline static final _defaultID:String = "1185697129717583982";
+	private inline static final _defaultID:String = "1467593764250845428";
 	public static var clientID(default, set):String = _defaultID;
+
+	#if !android
 	private static var presence:DiscordPresence = new DiscordPresence();
+	#end
+
 	// hides this field from scripts and reflection in general
 	@:unreflective private static var __thread:Thread;
 
@@ -34,17 +42,24 @@ class DiscordClient
 		if (!isInitialized && ClientPrefs.data.discordRPC)
 			initialize();
 
+		#if !android
 		Application.current.window.onClose.add(function() {
 			if(isInitialized) shutdown();
 		});
+		#end
 	}
 
 	public dynamic static function shutdown()
 	{
 		isInitialized = false;
+		#if android
+		AndroidRPC.shutdown();
+		#else
 		Discord.Shutdown();
+		#end
 	}
 	
+	#if !android
 	private static function onReady(request:cpp.RawConstPointer<DiscordUser>):Void
 	{
 		final user = cast (request[0].username, String);
@@ -89,9 +104,18 @@ class DiscordClient
 			});
 		});
 	}
+	#end
 
 	public static function initialize()
 	{
+		#if android
+		if(!isInitialized) 
+		{
+			AndroidRPC.initialize();
+			trace("Discord Client (Android) initialized");
+			isInitialized = true;
+		}
+		#else
 		var discordHandlers:DiscordEventHandlers = new DiscordEventHandlers();
 		discordHandlers.ready = cpp.Function.fromStaticFunction(onReady);
 		discordHandlers.disconnected = cpp.Function.fromStaticFunction(onDisconnected);
@@ -116,19 +140,13 @@ class DiscordClient
 						Discord.RunCallbacks();
 					}
 
-					// causes rpc corruption wow!!!!
-					// if (haxe.Timer.stamp() - lastUpdate > 10) {
-					// 	Waiter.putPersist(() -> {
-					// 		updatePresence();
-					// 	});
-					// }
-
 					// Wait 1 second until the next loop...
 					Sys.sleep(1.0);
 				}
 			});
 		}
 		isInitialized = true;
+		#end
 	}
 
 	static var state:String = null;
@@ -138,8 +156,12 @@ class DiscordClient
 		var startTimestamp:Float = 0;
 		if (hasStartTimestamp) startTimestamp = Date.now().getTime();
 		if (endTimestamp > 0) endTimestamp = startTimestamp + endTimestamp;
+		DiscordClient.state = state;
 
-		presence.state = DiscordClient.state = state;
+		#if android
+		AndroidRPC.update(details, state, largeImageKey);
+		#else
+		presence.state = DiscordClient.state;
 		presence.details = details;
 		presence.smallImageKey = smallImageKey;
 		presence.largeImageKey = largeImageKey;
@@ -148,12 +170,14 @@ class DiscordClient
 		presence.startTimestamp = Std.int(startTimestamp / 1000);
 		presence.endTimestamp = Std.int(endTimestamp / 1000);
 		updateOnlinePresence();
+		#end
 
 		//trace('Discord RPC Updated. Arguments: $details, $state, $smallImageKey, $hasStartTimestamp, $endTimestamp, $largeImageKey');
 	}
 
 	public static function updateOnlinePresence():Void
 	{
+		#if !android
 		if (GameClient.isConnected() && GameClient.room?.state != null)
 		{
 			if (!GameClient.room.state.isPrivate)
@@ -169,7 +193,7 @@ class DiscordClient
 				presence.state = "In a Private Room";
 			}
 			presence.partySize = GameClient.getPlayerCount();
-			presence.partyMax = 6;
+			presence.partyMax = 4;
 		}
 		else
 		{
@@ -180,16 +204,17 @@ class DiscordClient
 			presence.state = state;
 		}
 		updatePresence();
+		#end
 	}
 
-	static var lastUpdate = 0.0;
 	public static function updatePresence()
 	{
 		if (!ClientPrefs.data.discordRPC)
 			return;
 
+		#if !android
 		Discord.UpdatePresence(cpp.RawConstPointer.addressOf(presence.__presence));
-		lastUpdate = haxe.Timer.stamp();
+		#end
 	}
 	
 	inline public static function resetClientID()
@@ -236,6 +261,7 @@ class DiscordClient
 	#end
 }
 
+#if !android
 @:allow(backend.DiscordClient)
 private final class DiscordPresence
 {
@@ -383,4 +409,5 @@ private final class DiscordPresence
 		return __presence.partyMax = value;
 	}
 }
+#end
 #end

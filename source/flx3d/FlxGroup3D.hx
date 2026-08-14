@@ -1,6 +1,5 @@
 package flx3d;
 
-import away3d.core.managers.Stage3DManager;
 import openfl.events.Event;
 import flixel.FlxBasic;
 import flixel.FlxSprite;
@@ -24,12 +23,6 @@ class FlxGroup3D extends FlxBasic {
 
 		// view.scene.scaleMode = StageScaleMode.NO_SCALE;
 		// view.scene.align = StageAlign.TOP;
-
-		final stage3DManager = Stage3DManager.getInstance(FlxG.stage);
-		final stage3DProxy = stage3DManager.getFreeStage3DProxy();
-		// prevents render depth fuckery with skybox 
-		view.stage3DProxy = stage3DProxy;
-		view.shareContext = true;
 
         if (front)
             FlxG.stage.addChild(view);
@@ -71,8 +64,6 @@ class FlxGroup3D extends FlxBasic {
 	}
 
 	@:noCompletion override function draw() {
-		view.stage3DProxy.clear();
-
         // game filters (shaders) are removed only for the 3d render because view3D does funky bugs when they are on
         var gameFilters = FlxG.game.filters;
         FlxG.game.filters = null;
@@ -82,8 +73,6 @@ class FlxGroup3D extends FlxBasic {
 		FlxG.game.filters = gameFilters;
 
 		super.draw();
-
-		view.stage3DProxy.present();
     }
 
 	override function update(elapsed:Float) {
@@ -91,13 +80,6 @@ class FlxGroup3D extends FlxBasic {
 
 		for (sprite3D in members3D) {
 			sprite3D.update(elapsed);
-		}
-
-		for (i in 0...view.scene.numChildren) {
-        	var obj = view.scene.getChildAt(i);
-			if (obj?.extra != null && obj.extra.onUpdate != null) {
-				obj.extra.onUpdate(elapsed);
-			}
 		}
 	}
 
@@ -107,10 +89,6 @@ class FlxGroup3D extends FlxBasic {
 		if (view != null) {
 			FlxG.stage.removeChild(view);
 			view.scene._sceneGraphRoot.disposeWithChildren();
-			if (view.stage3DProxy != null) {
-				view.stage3DProxy.clear();
-				view.stage3DProxy.dispose();
-			}
             view.dispose();
 			view = null;
 		}

@@ -122,6 +122,7 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 
 	public function new()
 	{
+		controls.isInSubstate = true;
 		super();
 		
 		var bg:FlxSprite = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
@@ -146,7 +147,7 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 
 		for (i in 0...optionsArray.length)
 		{
-			var optionText:Alphabet = new Alphabet(200, 360, optionsArray[i].name, true);
+			var optionText:Alphabet = new Alphabet(200, 360, Language.getText(optionsArray[i].name), true);
 			optionText.isMenuItem = true;
 			optionText.setScale(0.8);
 			optionText.targetY = i;
@@ -178,8 +179,13 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 		reloadCheckboxes();
 
 		if (GameClient.isConnected()) {
+			MusicBeatState.getState().mobileManager.mobilePad.visible = false;
+
 			GameClient.callbacks.onChange(GameClient.room.state.gameplaySettings, receiveChange);
 		}
+
+		mobileManager.addMobilePad('FULL', 'A_B_C');
+		mobileManager.addMobilePadCamera();
 	}
 
 	function receiveChange() {
@@ -219,6 +225,9 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 		}
 
 		if (controls.BACK) {
+			controls.isInSubstate = false;
+			if (GameClient.isConnected())
+				MusicBeatState.getState().mobileManager.mobilePad.visible = true;
 			close();
 			ClientPrefs.saveSettings();
 			FlxG.sound.play(Paths.sound('cancelMenu'));
@@ -332,7 +341,7 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 				}
 			}
 
-			if(controls.RESET)
+			if(mobileButtonJustPressed('C') || controls.RESET)
 			{
 				for (i in 0...optionsArray.length)
 				{

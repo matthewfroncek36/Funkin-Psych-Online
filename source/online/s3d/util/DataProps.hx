@@ -9,7 +9,7 @@ typedef StageData3D = {
 
 typedef StageObject3D = { >SpriteProps, >Object3DPose,
 	var type:String;
-	var ?scale:Null<Array<Float>>;
+	var scale:Null<Float>;
 }
 
 typedef Object3DPose = {
@@ -47,9 +47,6 @@ typedef SpriteProps = {
 
 	var ?frameSize:Array<Int>;
 	var ?animations:Array<AnimationData>;
-	var ?shader:String;
-	var ?segmentsW:Int;
-	var ?segmentsH:Int;
 }
 
 typedef AnimationDataMap = Map<String, AnimationData>;

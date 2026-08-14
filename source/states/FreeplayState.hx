@@ -126,11 +126,11 @@ class FreeplayState extends MusicBeatState
 	var selectedScore(default, set):Int = -1;
 	function set_selectedScore(v) {
 		if (v == -1 && selectedItem == 4) {
-			infoText.text = "LEFT or RIGHT to Switch Time / ACCEPT to view this leaderboard in browser";
+			infoText.text = Language.getText("LEFT or RIGHT to Switch Time / ACCEPT to view this leaderboard in browser");
 			topCategory.alpha = 1;
 		}
 		else {
-			infoText.text = "LEFT or RIGHT to Flip Pages / ACCEPT to view Player's replay of this song";
+			infoText.text = Language.getText("LEFT or RIGHT to Flip Pages / ACCEPT to view Player's replay of this song");
 			topCategory.alpha = 0.6;
 		}
 
@@ -185,7 +185,8 @@ class FreeplayState extends MusicBeatState
 		for (group in touchingAndEmotionalQuotes)
 			chances.push(Std.parseFloat(group[0]));
 		var quotes = touchingAndEmotionalQuotes[FlxG.random.weightedPick(chances)][1];
-		return randomMessage = StringTools.replace(quotes[FlxG.random.int(0, quotes.length - 1)], 'BOYFRIEND', ClientPrefs.getNickname().toUpperCase());
+		var quote = Language.getText(quotes[FlxG.random.int(0, quotes.length - 1)]);
+		return randomMessage = StringTools.replace(quote, 'BOYFRIEND', ClientPrefs.getNickname().toUpperCase());
 	}
 
 	// weightedPick
@@ -201,6 +202,9 @@ class FreeplayState extends MusicBeatState
 
 	override function create()
 	{
+		Paths.clearUnusedMemory();
+		Paths.clearStoredMemory();
+
 		instance = this;
 
 		prevPauseGame = FlxG.autoPause;
@@ -216,7 +220,6 @@ class FreeplayState extends MusicBeatState
 
 		#if DISCORD_ALLOWED
 		// Updating Discord Rich Presence
-		DiscordClient.resetClientID();
 		DiscordClient.changePresence("In the Menus", "Freeplay");
 		#end
 
@@ -254,13 +257,13 @@ class FreeplayState extends MusicBeatState
 			playFreakyMusic();
 		
 		diffSelect = new Alphabet(0, 0, "< ? >", true);
-		modifiersSelect = new Alphabet(0, 0, !GameClient.isConnected() ? "GAMEPLAY MODIFIERS" : "MODIFIERS UNAVAILABLE HERE", true);
-		replaysSelect = new Alphabet(0, 0, !GameClient.isConnected() ? "LOAD REPLAY" : "REPLAYS UNAVAILABLE", true);
-		resetSelect = new Alphabet(0, 0, "RESET SCORE", true);
-		topTitle = new Alphabet(0, 0, "LEADERBOARD", true);
-		topCategory = new Alphabet(0, 0, "< ALL TIME >", true);
-		topLoading = new Alphabet(0, 0, "LOADING", true);
-		topShit = new Scoreboard(FlxG.width - 200, 32, 15, ["PLAYER", "SCORE", "ACCURACY"]);
+		modifiersSelect = new Alphabet(0, 0, !GameClient.isConnected() ? Language.getText("GAMEPLAY MODIFIERS") : Language.getText("MODIFIERS UNAVAILABLE HERE"), true);
+		replaysSelect = new Alphabet(0, 0, !GameClient.isConnected() ? Language.getText("LOAD REPLAY") : Language.getText("REPLAYS UNAVAILABLE"), true);
+		resetSelect = new Alphabet(0, 0, Language.getText("RESET SCORE"), true);
+		topTitle = new Alphabet(0, 0, Language.getText("LEADERBOARD"), true);
+		topCategory = new Alphabet(0, 0, Language.getText("< ALL TIME >"), true);
+		topLoading = new Alphabet(0, 0, Language.getText("LOADING"), true);
+		topShit = new Scoreboard(FlxG.width - 200, 32, 15, [Language.getText("PLAYER"), Language.getText("SCORE"), Language.getText("ACCURACY")]);
 
 		bg = new FlxSprite().loadGraphic(Paths.image('menuDesat'));
 		bg.antialiasing = ClientPrefs.data.antialiasing;
@@ -471,7 +474,7 @@ class FreeplayState extends MusicBeatState
 		topTitle.cameras = [itemsCamera];
 		add(topTitle);
 
-		topCategory.text = '< ${Leaderboard.categoryTitles[curCategory]} >';
+		topCategory.text = Language.getText('< ${Leaderboard.categoryTitles[curCategory]} >');
 		topCategory.setScale(0.4);
 		topCategory.visible = false;
 		topCategory.cameras = [itemsCamera];
@@ -664,6 +667,8 @@ class FreeplayState extends MusicBeatState
 		updateTexts();
 		searchString = searchString;
 
+		mobileManager.addMobilePad('FULL', (GameClient.isConnected()) ? 'FREEPLAY_ONLINE' : 'FREEPLAY');
+		mobileManager.addMobilePadCamera();
 		super.create();
 
 		CustomFadeTransition.nextCamera = hudCamera;
@@ -752,10 +757,9 @@ class FreeplayState extends MusicBeatState
 		#end
 
 		for (i => directory in directories) {
-			if (FileSystem.exists(directory)) {
-				for (file in FileSystem.readDirectory(directory)) {
-					var path = haxe.io.Path.join([directory, file]);
-					if (!sys.FileSystem.isDirectory(path) && file.endsWith('.json')) {
+			if (FunkinFileSystem.exists(directory)) {
+				for (file in FunkinFileSystem.readDirectory(directory)) {
+					if (file.endsWith('.json')) {
 						var charToCheck:String = file.substr(0, file.length - 5);
 						if (!charsWeeksLoaded.exists(charToCheck)) {
 							charsWeeksLoaded.set(charToCheck, directoryMods[i]);
@@ -811,12 +815,13 @@ class FreeplayState extends MusicBeatState
 		}
 
 		super.closeSubState();
+		mobileManager.mobilePad.visible = true;
+		mobileManager.removeMobilePad();
+		mobileManager.addMobilePad('FULL', (GameClient.isConnected()) ? 'FREEPLAY_ONLINE' : 'FREEPLAY');
+		mobileManager.addMobilePadCamera();
 	}
 
 	function setDiffVisibility(value:Bool) {
-		if (value)
-			updateDiff();
-		return;
 		searchInput.visible = value;
 		scoreBG.scale.y = 1;
 		scoreBG.y = 0;
@@ -860,7 +865,8 @@ class FreeplayState extends MusicBeatState
 	public static var vocals:FlxSound = null;
 	public static var opponentVocals:FlxSound = null;
 	var holdTime:Float = 0;
-
+	var doSongReset:Bool = false;
+	var resetTotalHeld:Float = 0;
 	var futureIcon:Future<BitmapData> = null;
 	var futureIndex:Int = -1;
 	var futureQueue:Array<Int> = [];
@@ -911,7 +917,7 @@ class FreeplayState extends MusicBeatState
 		if (curSelected == -1)
 			scoreText.text = randomMessage;
 		else
-			scoreText.text = 'PERSONAL BEST: ' + lerpScore + ' (' + ratingSplit.join('.') + '%)';
+			scoreText.text = Language.getText('PERSONAL BEST') + ': ' + lerpScore + ' (' + ratingSplit.join('.') + '%)';
 		positionHighscore();
 
 		if ((chatBox != null && chatBox.focused) || searchInputWait || transToPlayState) {
@@ -920,13 +926,20 @@ class FreeplayState extends MusicBeatState
 			return;
 		}
 
-		if (!selected && !searchInputWait && FlxG.keys.justPressed.F) {
+		if (!searchInputWait && (mobileButtonJustPressed('S') || FlxG.keys.justPressed.F)) {
+			FlxG.stage.window.textInputEnabled = true;
 			searchInputWait = true;
 			searchString = searchString;
 		}
 
+		#if android
+		if (FlxG.android.justPressed.BACK) {
+			tempDisableInput();
+		}
+		#end
+
 		var shiftMult:Int = 1;
-		if(FlxG.keys.pressed.SHIFT) shiftMult = 3;
+		if(mobileButtonPressed('Z') || FlxG.keys.pressed.SHIFT) shiftMult = 3;
 
 		if (!selected) {
 			if(songs.length > 0)
@@ -954,7 +967,7 @@ class FreeplayState extends MusicBeatState
 					holdTime = 0;
 				}
 
-				if (controls.FAV && curSelected != -1) {
+				if ((mobileButtonJustPressed('F') || controls.FAV) && curSelected != -1) {
 					var songId = songs[curSelected].songName + '-' + songs[curSelected].folder;
 					if (ClientPrefs.data.favSongs.contains(songId)) {
 						ClientPrefs.data.favSongs.remove(songId);
@@ -969,10 +982,10 @@ class FreeplayState extends MusicBeatState
 						favSound.play(true);
 					}
 					ClientPrefs.saveSettings();
-					changeSelection();
+					search();
 				}
 
-				if (controls.RESET && curSelected != -1 && !FlxG.keys.pressed.ALT) {
+				if (((mobileButtonJustReleased('R') && resetTotalHeld <= 3.5) || controls.RESET) && curSelected != -1 && !FlxG.keys.pressed.ALT) {
 					var songId = songs[curSelected].songName + '-' + songs[curSelected].folder;
 					if (ClientPrefs.data.hiddenSongs.contains(songId)) {
 						ClientPrefs.data.hiddenSongs.remove(songId);
@@ -1013,7 +1026,16 @@ class FreeplayState extends MusicBeatState
 				}
 			}
 
-			if (controls.RESET && FlxG.keys.pressed.ALT) {
+			if (mobileButtonPressed('R') && resetTotalHeld <= 3.5)
+			{
+				resetTotalHeld += elapsed;
+				if (resetTotalHeld >= 3.5)
+					doSongReset = true;
+			} else if (mobileButtonReleased('R'))
+				resetTotalHeld = 0;
+
+			if ((mobileButtonPressed('R') && doSongReset) || (controls.RESET && FlxG.keys.pressed.ALT)) {
+				doSongReset = false;
 				ClientPrefs.data.hiddenSongs = [];
 				ClientPrefs.saveSettings();
 				search();
@@ -1031,12 +1053,12 @@ class FreeplayState extends MusicBeatState
 					updateGroupTitle();
 				}
 
-				if (FlxG.keys.justPressed.CONTROL) {
+				if (mobileButtonJustPressed('G') || FlxG.keys.justPressed.CONTROL) {
 					persistentUpdate = false;
 					var daCopy = searchGroupVList.copy();
 					for (i => item in daCopy)
 						daCopy[i] = formatGroupItem(item);
-					
+					mobileManager.mobilePad.visible = false;
 					var selState = new online.substates.SoFunkinSubstate(daCopy, searchGroupValue, i -> {
 						searchGroupValue = i;
 						search();
@@ -1101,7 +1123,7 @@ class FreeplayState extends MusicBeatState
 				}
 			}
 
-			if(FlxG.keys.justPressed.SPACE)
+			if(mobileButtonJustPressed('X') || FlxG.keys.justPressed.SPACE)
 			{
 				if (curSelected == -1) {
 					var newSel = FlxG.random.int(0, songs.length - 1);
@@ -1126,15 +1148,15 @@ class FreeplayState extends MusicBeatState
 				}
 
 				curPage = 0;
-				selected = true;
 				listenToSong();
+				selected = true;
 				setDiffVisibility(false);
 				updateSelectSelection();
 
 				leaderboardTimer = 0;
 			}
 
-			if (chatBox == null && FlxG.keys.justPressed.TAB) {
+			if (chatBox == null && mobileButtonJustPressed('Y') || FlxG.keys.justPressed.TAB) {
 				persistentUpdate = false;
 				FlxG.switchState(() -> new online.states.SkinsState());
 			}
@@ -1211,6 +1233,7 @@ class FreeplayState extends MusicBeatState
 								loadSong();
 								persistentUpdate = false;
 								_substateIsModifiers = true;
+								mobileManager.mobilePad.visible = false;
 								openSubState(new GameplayChangersSubstate());
 							}
 							catch (e:Dynamic) {
@@ -1230,7 +1253,7 @@ class FreeplayState extends MusicBeatState
 						}
 					case 2:
 						if (!GameClient.isConnected()) {
-							if (!FileSystem.exists("replays/"))
+							if (!FunkinFileSystem.exists("replays/"))
 								FileSystem.createDirectory("replays/");
 
 							var fileDialog = new FileDialog();
@@ -1331,7 +1354,7 @@ class FreeplayState extends MusicBeatState
 						curCategory--;
 						if (curCategory < 0)
 							curCategory = Leaderboard.categories.length - 1;
-						topCategory.text = '< ${Leaderboard.categoryTitles[curCategory]} >';
+						topCategory.text = Language.getText('< ${Leaderboard.categoryTitles[curCategory]} >');
 					}
 					
 					leaderboardTimer = 0;
@@ -1344,7 +1367,7 @@ class FreeplayState extends MusicBeatState
 						curCategory++;
 						if (curCategory >= Leaderboard.categories.length)
 							curCategory = 0;
-						topCategory.text = '< ${Leaderboard.categoryTitles[curCategory]} >';
+						topCategory.text = Language.getText('< ${Leaderboard.categoryTitles[curCategory]} >');
 					}
 
 					leaderboardTimer = 0;
@@ -1374,14 +1397,14 @@ class FreeplayState extends MusicBeatState
 					var iconPath = 'icons/icon-face';
 					online.util.ShitUtil.tempSwitchMod(songs[futureIndex].folder, () -> {
 						iconPath = HealthIcon.findIconPath(songs[futureIndex].songCharacter);
-						futureIcon = Paths.asyncBitmap(iconPath, null, songs[futureIndex].folder);
 					});
+					futureIcon = Paths.asyncBitmap(iconPath, null, songs[futureIndex].folder);
 					futureIconPath = iconPath;
 				}
 			}
 		}
 
-		if (FlxG.keys.pressed.SHIFT && !selected) {
+		if (mobileButtonPressed('Z') || FlxG.keys.pressed.SHIFT && !selected) {
 			itemsCameraZoom = FlxMath.lerp(itemsCameraZoom, 0.65, elapsed * 10);
 			itemsCameraScrollX = FlxMath.lerp(itemsCameraScrollX, 150, elapsed * 10);
 		}
@@ -1394,18 +1417,6 @@ class FreeplayState extends MusicBeatState
 		itemsCamera.x = -itemsCameraScrollX;
 		if (selected)
 			leaderboardTimer += elapsed;
-	}
-
-	public function updateDiff() {
-		if (!selected) {
-			searchString = searchString;
-			return;
-		}
-
-		searchInput.text = '???';
-		var diff = online.ChartAnalyzer.calc(PlayState.SONG, !ClientPrefs.getGameplaySetting('opponentplay'));
-		if (diff != null)
-			searchInput.text = 'NPS: ${FlxMath.roundDecimal(diff.nps, 2)} · Strain: ${FlxMath.roundDecimal(diff.strain, 2)}';
 	}
 
 	var itemsCameraZoom:Float = 1;
@@ -1445,7 +1456,7 @@ class FreeplayState extends MusicBeatState
 	var leaderboardTimer(default, set):Float = 3;
 	function set_leaderboardTimer(v:Float) {
 		if (v == 0) {
-			topLoading.text = 'Loading...';
+			topLoading.text = Language.getText('Loading...');
 			topLoading.visible = true;
 			topShit.visible = false;
 			hasLeaderboardTimerEnded = false;
@@ -1468,7 +1479,6 @@ class FreeplayState extends MusicBeatState
 		_ledSong = formatSong;
 
 		updateManiaKeys();
-		updateDiff();
 	}
 
 	function updateManiaKeys() {
@@ -1567,32 +1577,33 @@ class FreeplayState extends MusicBeatState
 
 	var centerPoint:FlxObject;
 	function updateSelectSelection() {
+		var space = controls.mobileControls ? "X" : "SPACE";
+		var ctrl = controls.mobileControls ? "G" : "CTRL";
 		missingText.visible = false;
 		missingTextBG.visible = false;
 
 		scoreText.visible = true;
 		scoreBG.visible = true;
-		searchInput.visible = true;
 
 		itemsCamera.targetOffset.set(0, 0);
 
 		if (curSelected == -1) {
-			infoText.text = "ACCEPT to select a random song / SPACE to select without loading / CTRL to select song group";
+			infoText.text = Language.getText("ACCEPT to select a random song / %{1}% to select without loading / %{2}% to select song group", [space, ctrl]);
 			if (chatBox == null)
-				infoText.text += ' / TAB to select your character!';
+				infoText.text += Language.getText(' / TAB to select your character!');
 			return;
 		}
 
 		switch (selectedItem) {
 			case 0:
 				if (selected) {
-					infoText.text = "ACCEPT to enter the Song / Use your Arrow Keys to change the Difficulty";
+					infoText.text = Language.getText("ACCEPT to enter the Song / Use your Arrow Keys to change the Difficulty");
 					itemsCamera.targetOffset.y += 200;
 				}
 				else {
-					infoText.text = "ACCEPT to select the Song / SPACE to listen to the Song / RESET to " + (searchGroup == DEFAULT && searchGroupValue == 2 ? 'show' : 'hide') + " the Song";
+					infoText.text = Language.getText("ACCEPT to select the Song / %{1}% to listen to the Song / RESET to ", [space]) + (searchGroup == DEFAULT && searchGroupValue == 2 ? Language.getText('show') : Language.getText('hide')) + Language.getText(" the Song");
 					if (chatBox == null)
-						infoText.text += ' / TAB to select your character!';
+						infoText.text += Language.getText(' / TAB to select your character!');
 				}
 
 				if (centerPoint == null)
@@ -1608,7 +1619,7 @@ class FreeplayState extends MusicBeatState
 				topCategory.alpha = 0.6;
 				topLoading.alpha = 0.6;
 			case 1:
-				infoText.text = "ACCEPT to open Gameplay Modifers Menu";
+				infoText.text = Language.getText("ACCEPT to open Gameplay Modifers Menu");
 
 				itemsCamera.follow(modifiersSelect, null, 0.15);
 				itemsCamera.targetOffset.y += 200;
@@ -1622,7 +1633,7 @@ class FreeplayState extends MusicBeatState
 				topCategory.alpha = 0.6;
 				topLoading.alpha = 0.6;
 			case 2:
-				infoText.text = "ACCEPT to load a Replay data file";
+				infoText.text = Language.getText("ACCEPT to load a Replay data file");
 				
 				itemsCamera.follow(replaysSelect, null, 0.15);
 				itemsCamera.targetOffset.y += 200;
@@ -1636,7 +1647,7 @@ class FreeplayState extends MusicBeatState
 				topCategory.alpha = 0.6;
 				topLoading.alpha = 0.6;
 			case 3:
-				infoText.text = "ACCEPT to reset Score and Accuracy of this Song";
+				infoText.text = Language.getText("ACCEPT to reset Score and Accuracy of this Song");
 
 				itemsCamera.follow(resetSelect, null, 0.15);
 				itemsCamera.targetOffset.y += 200;
@@ -1650,7 +1661,7 @@ class FreeplayState extends MusicBeatState
 				topCategory.alpha = 0.6;
 				topLoading.alpha = 0.6;
 			case 4:
-				infoText.text = "LEFT or RIGHT to Flip Pages / ACCEPT to view Player's replay of this song";
+				infoText.text = Language.getText("LEFT or RIGHT to Flip Pages / ACCEPT to view Player's replay of this song");
 
 				itemsCamera.follow(topShit.background, null, 0.15);
 				itemsCamera.targetOffset.y -= 120 + topTitle.height;
@@ -1666,11 +1677,10 @@ class FreeplayState extends MusicBeatState
 
 				scoreText.visible = false;
 				scoreBG.visible = false;
-				searchInput.visible = false;
 		}
 
 		if (selected)
-			infoText.text += " / BACK to return to Songs";
+			infoText.text += Language.getText(" / BACK to return to Songs");
 
 		if (GameClient.isConnected()) {
 			replaysSelect.alpha -= 0.4;
@@ -1697,8 +1707,6 @@ class FreeplayState extends MusicBeatState
 				PlayState.loadSong(poop, getSongName().toLowerCase());
 				Conductor.bpm = PlayState.SONG.bpm;
 				Conductor.mapBPMChanges(PlayState.SONG);
-
-				updateDiff();
 
 				vocals = new FlxSound();
 				opponentVocals = new FlxSound();
@@ -1751,13 +1759,7 @@ class FreeplayState extends MusicBeatState
 				playFreakyMusic();
 
 				updateTexts(FlxG.elapsed);
-
-				if (selected)
-					searchInput.text = '???';
 			}
-		}
-		else {
-			updateDiff();
 		}
 	}
 
@@ -1817,24 +1819,18 @@ class FreeplayState extends MusicBeatState
 
 		lastDifficultyName = Difficulty.getString(curDifficulty);
 		if (Difficulty.list.length > 1) {
-			diffSelect.text = '< ' + lastDifficultyName.toUpperCase() + ' >'; 
+			diffSelect.text = '< ' + Language.getText(lastDifficultyName.toUpperCase()) + ' >'; 
 		}
 		else {
-			diffSelect.text = lastDifficultyName.toUpperCase();
+			diffSelect.text = Language.getText(lastDifficultyName.toUpperCase());
 		}
 
 		positionHighscore();
 		missingText.visible = false;
 		missingTextBG.visible = false;
 
-		if (selected) {
-			try {
-				loadSong();
-				listenToSong();
-			} catch (exc) {
-				searchInput.text = '???';
-			}
-		}
+		if (selected)
+			listenToSong();
 	}
 
 	function swapItems(arr:Array<Dynamic>, indexA:Int, indexB:Int) {

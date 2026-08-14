@@ -7,6 +7,7 @@ import flixel.graphics.frames.FlxAtlasFrames;
 import backend.NoteSkinData;
 import online.GameClient;
 import backend.NoteTypesConfig;
+import shaders.ColorSwap;
 import shaders.RGBPalette;
 import shaders.RGBPalette.RGBShaderReference;
 import objects.StrumNote;
@@ -38,9 +39,11 @@ class Note extends FlxSprite
 {
 	public var extraData:Map<String, Dynamic> = new Map<String, Dynamic>();
 
+	public var strumLineID:Int = 0; //A strumline id this note belongs.
 	public var strumTime:Float = 0;
 	public var mustPress(default, set):Bool = false;
 	public var noteData:Int = 0;
+	public var rawData:Array<Dynamic> = [];
 	public var canBeHit:Bool = false;
 	public var tooLate:Bool = false;
 	public var wasGoodHit:Bool = false;
@@ -65,6 +68,7 @@ class Note extends FlxSprite
 	public var eventVal1:String = '';
 	public var eventVal2:String = '';
 
+	public var colorSwap:ColorSwap;
 	public var rgbShader:RGBShaderReference;
 	public static var globalRgbShaders:Array<RGBPalette> = [];
 	public var inEditor:Bool = false;
@@ -74,6 +78,10 @@ class Note extends FlxSprite
 	public var earlyHitMult:Float = 1;
 	public var lateHitMult:Float = 1;
 	public var lowPriority:Bool = false;
+
+	public var noteSplashHue:Float = 0;
+	public var noteSplashSat:Float = 0;
+	public var noteSplashBrt:Float = 0;
 
 	public static var rankedManiaKeysList:Array<Int> = [4, 5, 6, 7, 8, 9];
 	public static var maniaKeysList:Array<Int> = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 20, 21, 26, 50, 55, 61];
@@ -93,7 +101,10 @@ class Note extends FlxSprite
 	}
 	public static var noteScale(get, default):Float = 0.7;
 	static function get_noteScale() {
-		return (swagWidth * 4) / (swagWidth * Math.max(4, maniaKeys)) * (1 + (0.1 * (Math.min(9, Math.max(4, maniaKeys)) - 4)));
+		if (ClientPrefs.data.ogGameControls && Note.maniaKeys < 10)
+			return (swagWidth * 4) / (swagWidth * 4) + (0.055 * (4 - 4));
+		else
+			return (swagWidth * 4) / (swagWidth * Math.max(4, maniaKeys)) * (1 + (0.1 * (Math.min(9, Math.max(4, maniaKeys)) - 4)));
 	}
 
 	public static function getNoteOffsetX() {
@@ -101,7 +112,7 @@ class Note extends FlxSprite
 	}
 
 	public static var colArray:Array<String> = ['purple', 'blue', 'green', 'red'];
-	public static var defaultNoteSkin(default, never):String = 'noteSkins/NOTE_assets';
+	public static var defaultNoteSkin(get, never):String;
 
 	public var noteSplashData:NoteSplashData = {
 		disabled: false,
@@ -122,14 +133,10 @@ class Note extends FlxSprite
 	public var multAlpha(default, set):Float = 1;
 	public var multSpeed(default, set):Float = 1;
 
-	public var copyX(get, default):Bool = true;
-	public var copyY(get, default):Bool = true;
+	public var copyX:Bool = true;
+	public var copyY:Bool = true;
 	public var copyAngle:Bool = true;
-	public var copyAlpha(get, default):Bool = true;
-
-	function get_copyX():Bool { return isForceShowed() ? true : copyX; }
-	function get_copyY():Bool { return isForceShowed() ? true : copyY; }
-	function get_copyAlpha():Bool { return isForceShowed() ? true : copyAlpha; }
+	public var copyAlpha:Bool = true;
 
 	public var hitHealth:Float = 0.02;
 	public var missHealth:Float = 0.1;
@@ -187,17 +194,29 @@ class Note extends FlxSprite
 		var arr:Array<FlxColor> = ClientPrefs.getRGBColor(mustPress == (GameClient.getPlayerSelf()?.bfSide ?? true) ? 0 : 1)[noteData];
 		if(PlayState.isPixelStage) arr = ClientPrefs.getRGBPixelColor(mustPress == (GameClient.getPlayerSelf()?.bfSide ?? true) ? 0 : 1)[noteData];
 
-		if (noteData > -1 && arr.length >= 3)
-		{
-			rgbShader.r = arr[0];
-			rgbShader.g = arr[1];
-			rgbShader.b = arr[2];
-		}
+		try {
+			if (noteData > -1 && arr.length >= 3)
+			{
+				rgbShader.r = arr[0];
+				rgbShader.g = arr[1];
+				rgbShader.b = arr[2];
+			}
+		} catch(e:Dynamic) {}
 	}
 
 	private function set_noteType(value:String):String {
 		noteSplashData.texture = PlayState.SONG != null ? PlayState.SONG.splashSkin : 'noteSplashes';
-		defaultRGB();
+		if (ClientPrefs.data.disableRGBNotes) {
+			var hsvColor = ClientPrefs.getHSVColor(mustPress == (GameClient.getPlayerSelf()?.bfSide ?? true) ? 0 : 1);
+			if (noteData > -1 && noteData < hsvColor.length)
+			{
+				colorSwap.hue = noteSplashHue = hsvColor[noteData][0] / 360;
+				colorSwap.saturation = noteSplashSat = hsvColor[noteData][1] / 100;
+				colorSwap.brightness = noteSplashBrt = hsvColor[noteData][2] / 100;
+			}
+		}
+		else
+			defaultRGB();
 
 		if(noteData > -1 && noteType != value) {
 			switch(value) {
@@ -208,14 +227,28 @@ class Note extends FlxSprite
 					//but i've changed it to something more optimized with the implementation of RGBPalette:
 
 					// note colors
-					rgbShader.r = 0xFF101010;
-					rgbShader.g = 0xFFFF0000;
-					rgbShader.b = 0xFF990022;
+					if (ClientPrefs.data.disableRGBNotes)
+					{
+						reloadNote('HURTNOTE_assets');
+						// note and splash data colors
+						colorSwap.hue = noteSplashHue = 0;
+						colorSwap.saturation = noteSplashSat = 0;
+						colorSwap.brightness = noteSplashBrt = 0;
 
-					// splash data and colors
-					noteSplashData.r = 0xFFFF0000;
-					noteSplashData.g = 0xFF101010;
-					noteSplashData.texture = 'noteSplashes/noteSplashes-electric';
+						noteSplashData.texture = 'HURTnoteSplashes';
+					}
+					else
+					{
+						// note colors
+						rgbShader.r = 0xFF101010;
+						rgbShader.g = 0xFFFF0000;
+						rgbShader.b = 0xFF990022;
+
+						// splash data and colors
+						noteSplashData.r = 0xFFFF0000;
+						noteSplashData.g = 0xFF101010;
+						noteSplashData.texture = 'noteSplashes/noteSplashes-electric';
+					}
 
 					// gameplay data
 					lowPriority = true;
@@ -309,8 +342,17 @@ class Note extends FlxSprite
 
 		if(noteData > -1) {
 			texture = '';
-			rgbShader = new RGBShaderReference(this, initializeGlobalRGBShader(noteData, mustPress));
-			if(PlayState.SONG != null && PlayState.SONG.disableNoteRGB) rgbShader.enabled = false;
+			if (ClientPrefs.data.disableRGBNotes)
+			{
+				colorSwap = new ColorSwap();
+				shader = colorSwap.shader;
+			}
+			else
+			{
+				rgbShader = new RGBShaderReference(this, initializeGlobalRGBShader(noteData, mustPress));
+				if (PlayState.SONG != null && PlayState.SONG.disableNoteRGB)
+					rgbShader.enabled = false;
+			}
 
 			x += swagScaledWidth * (noteData);
 			if(!isSustainNote && noteData < colArray.length) { //Doing this 'if' check to fix the warnings on Senpai songs
@@ -450,10 +492,8 @@ class Note extends FlxSprite
 			var graphic = null;
 			if(isSustainNote) {
 				graphic = Paths.image('pixelUI/' + skinPixel + 'ENDS' + skinPostfix);
-				if (graphic != null){
-					loadGraphic(graphic, true, Math.floor(graphic.width / 4), Math.floor(graphic.height / 2));
-					originalHeight = graphic.height / 2;
-				}
+				loadGraphic(graphic, true, Math.floor(graphic.width / 4), Math.floor(graphic.height / 2));
+				originalHeight = graphic.height / 2;
 			}
 			else if (colArray[noteData] == 'odd') {
 				graphic = Paths.image('pixelUI/' + skinPixel + skinPostfix + '_ODD');
@@ -530,12 +570,6 @@ class Note extends FlxSprite
 
 	override function update(elapsed:Float)
 	{
-		if (isForceShowed()) {
-			@:bypassAccessor x = followX; 
-			@:bypassAccessor y = followY; 
-			@:bypassAccessor alpha = noteAlpha; 
-		}
-
 		super.update(elapsed);
 
 		if (PlayState.isPlayerNote(this))
@@ -586,6 +620,8 @@ class Note extends FlxSprite
 		var strumAngle:Float = myStrum.angle;
 		var strumAlpha:Float = myStrum.alpha;
 		var strumDirection:Float = myStrum.direction;
+
+		if (isSustainNote) flipY = myStrum.downScroll; //can fix the sustain notes ig
 
 		distance = (0.45 * (Conductor.songPosition - strumTime) * songSpeed * multSpeed);
 		if (!myStrum.downScroll) distance *= -1;
@@ -639,64 +675,51 @@ class Note extends FlxSprite
 	}
 
 	override function set_visible(value:Bool):Bool {
-		if (following != null && isForceShowed()) {
+		if (following != null && following.forceShow) {
 			return super.set_visible(following.visible);
 		}
 		return super.set_visible(value);
 	}
 
 	override function set_alpha(value:Float):Float {
-		if (following != null && isForceShowed()) {
+		if (following != null && following.forceShow) {
 			return super.set_alpha(following.alpha);
 		}
 		return super.set_alpha(value);
 	}
 
 	override function set_x(value:Float):Float {
-		if (following != null && isForceShowed()) {
+		if (following != null && following.forceShow) {
 			return x;
 		}
 		return super.set_x(value);
 	}
 
 	override function set_y(value:Float):Float {
-		if (following != null && isForceShowed()) {
+		if (following != null && following.forceShow) {
 			return y;
 		}
 		return super.set_y(value);
 	}
 
 	function set_multAlpha(value:Float):Float {
-		if (following != null && isForceShowed()) {
+		if (following != null && following.forceShow) {
 			return multAlpha;
 		}
 		return multAlpha = value;
 	}
 
-	@:unreflective @:isVar public var followX(get, set):Float;
-	@:unreflective function get_followX():Float { return isForceShowed() ? followX : x; }
-	@:unreflective function set_followX(value:Float):Float {
-		@:bypassAccessor x = value;
-		return followX = value;
-	}
+	@:unreflective public var followX(get, set):Float;
+	@:unreflective function get_followX():Float { return x; }
+	@:unreflective function set_followX(value:Float):Float { return super.set_x(value); }
 
-	@:unreflective @:isVar public var followY(get, set):Float;
-	@:unreflective function get_followY():Float { return isForceShowed() ? followY : y; }
-	@:unreflective function set_followY(value:Float):Float {
-		@:bypassAccessor y = value;
-		return followY = value;
-	}
+	@:unreflective public var followY(get, set):Float;
+	@:unreflective function get_followY():Float { return y; }
+	@:unreflective function set_followY(value:Float):Float { return super.set_y(value); }
 
-	@:unreflective @:isVar public var noteAlpha(get, set):Float;
-	@:unreflective function get_noteAlpha():Float { return isForceShowed() ? noteAlpha : alpha; }
-	@:unreflective function set_noteAlpha(value:Float):Float {
-		@:bypassAccessor alpha = value;
-		return noteAlpha = value;
-	}
-
-	function isForceShowed() {
-		return following?.forceShow ?? false;
-	}
+	@:unreflective public var noteAlpha(get, set):Float;
+	@:unreflective function get_noteAlpha():Float { return alpha; }
+	@:unreflective function set_noteAlpha(value:Float):Float { return super.set_alpha(value); }
 
 	var lastTexture:String = '';
 	var lastPostfix:String = '';
@@ -725,4 +748,7 @@ class Note extends FlxSprite
 
 		return value;
 	}
+
+	private static function get_defaultNoteSkin():String
+		return ClientPrefs.data.disableRGBNotes ? 'NOTE_assets' : 'noteSkins/NOTE_assets';
 }

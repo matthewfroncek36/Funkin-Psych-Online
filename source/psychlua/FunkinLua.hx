@@ -40,6 +40,9 @@ import psychlua.LuaUtils.LuaTweenOptions;
 #if HSCRIPT_ALLOWED
 import psychlua.HScript;
 #end
+#if mobile
+import mobile.psychlua.Functions;
+#end
 import psychlua.DebugLuaText;
 import psychlua.ModchartSprite;
 
@@ -69,15 +72,10 @@ class FunkinLua {
 		#if LUA_ALLOWED
 		lua = LuaL.newstate();
 
-		Convert.enableUnsupportedTraces = true;
+		// Convert.enableUnsupportedTraces = true; // Not available in linc_luajit 0.0.7
 
 		//load default lua libs
 		LuaL.openlibs(lua);
-
-		// Lua.gc(lua, Lua.LUA_GCSETPAUSE, 90);
-		// Lua.gc(lua, Lua.LUA_GCSETSTEPMUL, 400);
-		Lua.gc(lua, Lua.LUA_GCSTOP, 0);
-		// LuaJIT.setmode(lua, 0, LuaJIT.LUAJIT_MODE_OFF);
 
 		online.backend.LuaModuleSwap.doLua(lua, scriptName, () -> {
 			stop();
@@ -204,13 +202,7 @@ class FunkinLua {
 		// try {
 		// 	Lua.error(lua);
 		// } catch (exc) {}
-
-		LuaJIT.setmode(lua, 0, LuaJIT.LUAJIT_MODE_FLUSH); // does this do anything?
-		Lua_helper.stateStorage.clear(lua);
-		callbacks = null;
-
 		Lua.close(lua);
-
 		lua = null;
 		#if HSCRIPT_ALLOWED
 		if(hscript != null)
@@ -470,7 +462,7 @@ class FunkinLua {
 		set('rating', 0);
 		set('ratingName', '');
 		set('ratingFC', '');
-		set('version', MainMenuState.psychEngineVersion);
+		set('version', MainMenuState.psychEngineVersion.trim());
 
 		set('inGameOver', false);
 		set('mustHitSection', false);
@@ -623,7 +615,7 @@ class FunkinLua {
 							Lua.pushnumber(lua, Lua.tonumber(luaInstance.lua, -1));
 						else if (Lua.isstring(luaInstance.lua, -1))
 							Lua.pushstring(lua, Lua.tostring(luaInstance.lua, -1));
-						else if (Lua.isboolean(luaInstance.lua, -1))
+						else if (Lua.isboolean(luaInstance.lua, -1) != 0)
 							Lua.pushboolean(lua, Lua.toboolean(luaInstance.lua, -1));
 						else
 							Lua.pushnil(lua);
@@ -1651,14 +1643,30 @@ class FunkinLua {
 			var path:String;
 			#if MODS_ALLOWED
 			path = Paths.modsJson(Paths.formatToSongPath(PlayState.SONG.song) + '/' + dialogueFile);
-			if (!FileSystem.exists(path))
+			if(!FunkinFileSystem.exists(path))
 			#end
 			path = Paths.json(Paths.formatToSongPath(PlayState.SONG.song) + '/' + dialogueFile);
 
 			luaTrace('startDialogue: Trying to load dialogue: ' + path);
 
 			#if MODS_ALLOWED
-			if (FileSystem.exists(path))
+			if(!FunkinFileSystem.exists(path)) {
+				// Try CNE XML dialogue format
+				var xmlPath:String = Paths.modsJson(Paths.formatToSongPath(PlayState.SONG.song) + '/' + dialogueFile);
+				xmlPath = StringTools.replace(xmlPath, '.json', '.xml');
+				if(FunkinFileSystem.exists(xmlPath))
+					path = xmlPath;
+				else {
+					xmlPath = Paths.json(Paths.formatToSongPath(PlayState.SONG.song) + '/' + dialogueFile);
+					xmlPath = StringTools.replace(xmlPath, '.json', '.xml');
+					if(FunkinFileSystem.exists(xmlPath))
+						path = xmlPath;
+				}
+			}
+			#end
+
+			#if MODS_ALLOWED
+			if(FunkinFileSystem.exists(path))
 			#else
 			if (Assets.exists(path))
 			#end
@@ -1686,7 +1694,7 @@ class FunkinLua {
 		});
 		Lua_helper.add_callback(lua, "startVideo", function(videoFile:String) {
 			#if VIDEOS_ALLOWED
-			if (FileSystem.exists(Paths.video(videoFile))) {
+			if(FunkinFileSystem.exists(Paths.video(videoFile))) {
 				game.startVideo(videoFile);
 				return true;
 			}
@@ -1855,7 +1863,7 @@ class FunkinLua {
 		#if DISCORD_ALLOWED DiscordClient.addLuaCallbacks(lua); #end
 		#if ACHIEVEMENTS_ALLOWED Achievements.addLuaCallbacks(this); #end
 		#if HSCRIPT_ALLOWED HScript.implement(this); #end
-		FlxAnimateFunctions.implement(this);
+		#if flxanimate FlxAnimateFunctions.implement(this); #end
 		ReflectionFunctions.implement(this);
 		TextFunctions.implement(this);
 		ExtraFunctions.implement(this);
@@ -1863,14 +1871,7 @@ class FunkinLua {
 		ShaderFunctions.implement(this);
 		DeprecatedFunctions.implement(this);
 		online.backend.OnlineScriptFunctions.implement(this);
-	}
-
-	public function quickGC() {
-		CoolUtil.teleStamp(true);
-		if (lua != null) {
-			Lua.gc(lua, Lua.LUA_GCSTEP, 1);
-			Lua.gc(lua, Lua.LUA_GCSTOP, 0);
-		}
-		CoolUtil.teleStamp();
+		#if android AndroidFunctions.implement(this); #end
+		#if mobile MobileFunctions.implement(this); #end
 	}
 }

@@ -178,8 +178,8 @@ class OnlineOptionsState extends MusicBeatState {
 
 			var registerOption:InputOption;
 			items.add(registerOption = new InputOption("Register to the Network",
-			"Join the Psych Online Network and submit your song replays\nto the leaderboards!" + (Main.UNOFFICIAL_BUILD ? '\n(WARNING: You\'re running on a NOT OFFICIAL build)' : ''), ["Username", "Email"], (text, input) -> {
-				try {
+					"Join the Psych Online Network and submit your song replays\nto the leaderboards!", ["Username", "Email"], (text, input) -> {
+					try {
 					if (input == 0) {
 						registerOption.inputs[0].hasFocus = false;
 						registerOption.inputs[1].hasFocus = true;
@@ -205,7 +205,7 @@ class OnlineOptionsState extends MusicBeatState {
 					if (FunkinNetwork.requestRegister(registerOption.inputs[0].text, registerOption.inputs[1].text)) {
 						openSubState(new VerifyCodeSubstate(code -> {
 							if (FunkinNetwork.requestRegister(registerOption.inputs[0].text, registerOption.inputs[1].text, code)) {
-								Alert.alert("Successfully registered!", "New features have appeared in the sidebar!\nPress " + InputFormatter.getKeyName(cast(ClientPrefs.keyBinds.get('sidebar')[0], FlxKey)) + " to open it!");
+								Alert.alert("Successfully registered!");
 								FlxG.resetState();
 							}
 						}));
@@ -224,12 +224,12 @@ class OnlineOptionsState extends MusicBeatState {
 
 			var loginOption:InputOption;
 			items.add(loginOption = new InputOption("Login to the Network",
-			"Input your email address here and wait for your One-Time Login Code!" + (Main.UNOFFICIAL_BUILD ? '\n(WARNING: You\'re running on a NOT OFFICIAL build)' : ''), ["me@example.org"], (mail, _) -> {
+				"Input your email address here and wait for your One-Time Login Code!", ["me@example.org"], (mail, _) -> {
 				try {
 					if (FunkinNetwork.requestLogin(mail)) {
 						openSubState(new VerifyCodeSubstate(code -> {
 							if (FunkinNetwork.requestLogin(mail, code)) {
-								Alert.alert("Successfully logged in!", "New features have appeared in the sidebar!\nPress " + InputFormatter.getKeyName(cast(ClientPrefs.keyBinds.get('sidebar')[0], FlxKey)) + " to open it!");
+								Alert.alert("Successfully logged in!");
 								FlxG.resetState();
 							}
 						}));
@@ -308,7 +308,7 @@ class OnlineOptionsState extends MusicBeatState {
 			sezOption.ID = i++;
 
 			var sidebarOption:InputOption;
-			items.add(sidebarOption = new InputOption("Open Sidebar", "Open the Network Sidebar, if you aren't able to.\n(Press " + InputFormatter.getKeyName(cast(ClientPrefs.keyBinds.get('sidebar')[0], FlxKey)) + " to open it at any time!)", null, () -> {
+			items.add(sidebarOption = new InputOption("Open Sidebar", "Open the Network Sidebar" + ((!controls.mobileControls) ? ", if you aren't able to.\n(Press " + InputFormatter.getKeyName(cast(ClientPrefs.keyBinds.get('sidebar')[0], FlxKey)) + " to open it at any time!)" : ""), null, () -> {
 				online.gui.sidebar.SideUI.instance.active = true;
 			}));
 			sidebarOption.y = sezOption.y + sezOption.height + 50;
@@ -376,6 +376,9 @@ class OnlineOptionsState extends MusicBeatState {
 		add(items);
 
         changeSelection(0);
+        
+        mobileManager.addMobilePad('NONE', 'B');
+		mobileManager.addMobilePadCamera();
     }
 
 	var mouseMoveTimeout = 0.0;
@@ -611,10 +614,7 @@ class InputOption extends FlxSpriteGroup {
 			}
 		}
 
-		// try to reuse existing bitmaps
-		box.makeGraphic(1, 1, 0x81000000);
-		box.scale.set(Std.int(width) + 10, Std.int(height) + 20);
-		box.updateHitbox();
+		box.makeGraphic(Std.int(width) + 10, Std.int(height) + 20, 0x81000000);
 
 		borderline = new FlxSprite(box.x, box.y);
 		borderline.makeGraphic(Std.int(box.width), Std.int(box.height), FlxColor.TRANSPARENT);
@@ -624,7 +624,7 @@ class InputOption extends FlxSpriteGroup {
     }
 
 	//var targetScale:Float = 1;
-	override function update(elapsed) {
+	override function update(elapsed:Float) {
 		super.update(elapsed);
 
 		if (isInput)

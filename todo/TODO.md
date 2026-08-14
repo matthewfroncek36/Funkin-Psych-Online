@@ -1,0 +1,15 @@
+- Add ASTC and BPTC
+- Finish the Language System (I'll kill you Samet)
+- Add 3v3 Support for Playing with Psych Online Players
+- Make MacOS & Linux Builds
+- Completely Remove the Mobile Controls Things From PC Builds
+- Add Touch Support to Some Menus (GameOverSubstate, PauseMenuSubState, FreeplayState, etc...)
+- Add Custom Options via Hscript and Json (Make this Compatible with Old Psych Extended as Possible)
+- Hide Extra Character Miss Animations for Teammates in 2v2/3v3 Mode
+- Hide Extra Character Press Animations for Teammates in 2v2/3v3 Mode
+- Add Multiple Strumlines to Chart Editor
+- Add backwards lua compability
+- Rewrite the Mobile Controls Library(?)
+- Switch HScript-Improved to HScript-Iris-Improved(?)
+- Add HScript Improved Compability to HScript Iris Improved(?)
+- Refactor/Redo Scriptable States Support(?)

@@ -581,7 +581,10 @@ class ResultsState extends MusicBeatState {
 		var debugPoser = new online.objects.DebugPosHelper();
 		debugPoser.cameras = [camHUD];
 		add(debugPoser);
-    }
+
+		mobileManager.addMobilePad('NONE', 'B_C_T');
+		mobileManager.addMobilePadCamera();
+	}
 
 	function registerMessages() {
 		GameClient.initStateListeners(this, this.registerMessages);
@@ -653,7 +656,7 @@ class ResultsState extends MusicBeatState {
 		#if lumod
 		if (FlxG.keys.justPressed.F12) {
 			trace('reloading lumod');
-			// Lumod.storage.scripts.clear();
+			Lumod.cache.scripts.clear();
 			lmLoad();
 		}
 

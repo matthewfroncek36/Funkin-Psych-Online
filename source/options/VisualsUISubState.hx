@@ -16,6 +16,15 @@ class VisualsUISubState extends BaseOptionsMenu
 	var notesTween:Array<FlxTween> = [];
 	var noteY:Float = 90;
 
+	override function closeSubState() {
+		controls.isInSubstate = true;
+		super.closeSubState();
+		MusicBeatSubstate.instance = this;
+		controls.isInSubstate = true;
+		mobileManager.removeMobilePad();
+		mobileManager.addMobilePad('UP_DOWN', 'A_B');
+	}
+
 	function openNotes() {
 		// for note skins
 		notes = new FlxTypedGroup<StrumNote>();
@@ -29,14 +38,23 @@ class VisualsUISubState extends BaseOptionsMenu
 		}
 
 		// options
-
 		var option:Option = new Option('Note Colors',
 			'Set the colors for your notes!',
 			null,
 			'button');
 		option.onChange = () -> {
-			openSubState(new options.NotesSubState());
+			mobileManager.removeMobilePad();
+			if (ClientPrefs.data.disableRGBNotes)
+				openSubState(new options.NotesSubStateOld());
+			else
+				openSubState(new options.NotesSubState());
 		};
+		addOption(option);
+
+		var option:Option = new Option('Disable RGB Notes',
+			"If checked, notes will use the HSV coloring method.",
+			'disableRGBNotes',
+			'bool');
 		addOption(option);
 
 		if(NoteSkinData.noteSkins.length > 0)
@@ -192,6 +210,13 @@ class VisualsUISubState extends BaseOptionsMenu
 	}
 
 	function openUI() {
+		var option:Option = new Option('Language:',
+			"Select your language. \n(This is temporary option, will have own state later)",
+			'lang',
+			'string',
+			["EN", "TR"]);
+		addOption(option);
+
 		var option:Option = new Option('Hide HUD',
 			'If checked, hides most HUD elements.',
 			'hideHud',
@@ -257,14 +282,18 @@ class VisualsUISubState extends BaseOptionsMenu
 		option.decimals = 1;
 		addOption(option);
 
-		#if !mobile
 		var option:Option = new Option('FPS Counter',
 			'If unchecked, hides FPS Counter.',
 			'showFPS',
 			'bool');
 		addOption(option);
 		option.onChange = onChangeFPSCounter;
-		#end
+
+		var option:Option = new Option('Disable Online Shaders',
+			'If checked, disables shaders that being used on online menus.',
+			'disableOnlineShaders',
+			'bool');
+		addOption(option);
 	}
 
 	public function new(category:String)
@@ -343,11 +372,9 @@ class VisualsUISubState extends BaseOptionsMenu
 		super.destroy();
 	}
 
-	#if !mobile
 	function onChangeFPSCounter()
 	{
 		if(Main.fpsVar != null)
 			Main.fpsVar.visible = ClientPrefs.data.showFPS;
 	}
-	#end
 }

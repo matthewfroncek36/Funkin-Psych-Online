@@ -15,21 +15,20 @@ class FlashingState extends MusicBeatState
 	{
 		super.create();
 
+		final enter:String = (controls.mobileControls) ? 'A' : 'ENTER';
+		final back:String = (controls.mobileControls) ? 'B' : 'BACK';
+
 		var bg:FlxSprite = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
 		add(bg);
 
 		warnText = new FlxText(0, 0, FlxG.width,
-			"Hey, watch out!\n
-			This game can trigger photosensitive epilepsy! \n
-			If you have motion sickness you should check these settings!  \n\n
-			Press ENTER to check Accessibility Settings.\n
-			Press ESCAPE to ignore this message.\n\n
-			(These settings will not block all effects)\n
-			You've been warned!",
+			Language.getText("FlashingState.warnText", [enter, back]),
 			28);
 		warnText.setFormat("VCR OSD Mono", 28, FlxColor.WHITE, CENTER);
 		warnText.screenCenter(Y);
 		add(warnText);
+
+		mobileManager.addMobilePad('NONE', 'A_B');
 	}
 
 	override function update(elapsed:Float)

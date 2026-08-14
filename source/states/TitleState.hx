@@ -75,34 +75,77 @@ class TitleState extends MusicBeatState
 
 	override public function create():Void
 	{
+		#if ios
+		CoolUtil.showPopUp("trace 11", "none");
+		#end
+
 		Paths.clearStoredMemory();
 		Paths.clearUnusedMemory();
+
+		#if ios
+		CoolUtil.showPopUp("trace 12", "none");
+		#end
 
 		#if LUA_ALLOWED
 		Mods.pushGlobalMods();
 		#end
 		Mods.loadTopMod();
 
+		#if ios
+		CoolUtil.showPopUp("trace 13", "none");
+		#end
+
 		FlxG.fixedTimestep = false;
 		FlxG.game.focusLostFramerate = 60;
 		FlxG.keys.preventDefaultKeys = [TAB];
 
+		#if ios
+		CoolUtil.showPopUp("trace 14", "none");
+		#end
+
 		curWacky = FlxG.random.getObject(getIntroTextShit());
+
+		#if ios
+		CoolUtil.showPopUp("trace 15", "none");
+		#end
 
 		super.create();
 
 		FlxG.save.bind('funkin', CoolUtil.getSavePath());
 		online.network.Auth.load();
 
+		#if ios
+		CoolUtil.showPopUp("trace 16", "none");
+		#end
+
 		ClientPrefs.loadPrefs();
 		#if ACHIEVEMENTS_ALLOWED Achievements.load(); #end
+		#if ios
+		CoolUtil.showPopUp("trace 17", "none");
+		#end
+
+		#if VIDEOS_ALLOWED
+		hxvlc.util.Handle.init(#if (hxvlc >= "1.8.0")  ['--no-lua'] #end);
+		#end
+
+		#if ios
+		CoolUtil.showPopUp("trace 18", "none");
+		#end
 
 		backend.NoteSkinData.reloadNoteSkins();
 
 		Highscore.load();
 
+		#if ios
+		CoolUtil.showPopUp("trace 19", "none");
+		#end
+
 		// IGNORE THIS!!!
 		titleJSON = Json.parse(Paths.getTextFromFile('images/gfDanceTitle.json'));
+
+		#if ios
+		CoolUtil.showPopUp("trace 20", "none");
+		#end
 
 		#if TITLE_SCREEN_EASTER_EGG
 		if (FlxG.save.data.psychDevsEasterEgg == null) FlxG.save.data.psychDevsEasterEgg = ''; //Crash prevention
@@ -129,6 +172,13 @@ class TitleState extends MusicBeatState
 			}
 			persistentUpdate = true;
 			persistentDraw = true;
+			MobileConfig.init('MobileControls', CoolUtil.getSavePath(), 'assets/mobile/',
+				[
+					['MobilePad/DPadModes', ButtonModes.DPAD],
+					['MobilePad/ActionModes', ButtonModes.ACTION],
+					['Hitbox/HitboxModes', ButtonModes.HITBOX]
+				]
+			);
 		}
 
 		if (FlxG.save.data.weekCompleted != null)
@@ -149,21 +199,28 @@ class TitleState extends MusicBeatState
 		FlxG.switchState(() -> new ChartingState());
 		#else
 		if(FlxG.save.data.flashing == null && !FlashingState.leftState) {
+			controls.isInSubstate = false;
 			FlxTransitionableState.skipNextTransIn = true;
 			FlxTransitionableState.skipNextTransOut = true;
 			FlxG.switchState(() -> new FlashingState());
 		} else {
 			if (initialized)
-				startIntro();
+				startCutscenesIn();
 			else
 			{
 				new FlxTimer().start(1, function(tmr:FlxTimer)
 				{
-					startIntro();
+					startCutscenesIn();
 				});
 			}
 		}
 		#end
+	}
+
+	function startCutscenesIn()
+	{
+		if (event("onCutscenesIn", new CancellableEvent()).cancelled) return;
+		startIntro();
 	}
 
 	var logoBl:FlxSprite;
@@ -174,6 +231,7 @@ class TitleState extends MusicBeatState
 
 	function startIntro()
 	{
+		if (event("onStartIntro", new CancellableEvent()).cancelled) return;
 		if (!initialized)
 		{
 			if(FlxG.sound.music == null) {
@@ -307,6 +365,8 @@ class TitleState extends MusicBeatState
 
 		FlxTween.tween(credTextShit, {y: credTextShit.y + 20}, 2.9, {ease: FlxEase.quadInOut, type: PINGPONG});
 
+		if (event("onStartIntroPost", new CancellableEvent()).cancelled) return;
+
 		if (initialized)
 			skipIntro();
 		else
@@ -317,12 +377,7 @@ class TitleState extends MusicBeatState
 
 	function getIntroTextShit():Array<Array<String>>
 	{
-		#if MODS_ALLOWED
 		var firstArray:Array<String> = Mods.mergeAllTextsNamed('data/introText.txt', Paths.getPreloadPath());
-		#else
-		var fullText:String = Assets.getText(Paths.txt('introText'));
-		var firstArray:Array<String> = fullText.split('\n');
-		#end
 		var swagGoodArray:Array<Array<String>> = [];
 
 		for (i in firstArray)
@@ -340,8 +395,8 @@ class TitleState extends MusicBeatState
 	var titleTimer:Float = 0;
 
 	override function update(elapsed:Float)
-	{		
-		if (FlxG.keys.pressed.ALT && FlxG.keys.justPressed.P) {
+	{
+		if (FlxG.keys.justPressed.P) {
 			online.gui.Alert.alert(
 				'A Very Long Title So I Can Test How Much Can It Fit On The Screen Oh Yeaaaah!!!1!', //44
 				'Do you believe in god? Because I think that this is a complicated question, it depends on which mean by god. ' + //233
@@ -352,7 +407,7 @@ class TitleState extends MusicBeatState
 
 		#if lumod
 		if (FlxG.keys.justPressed.DELETE) {
-			// lumod.Lumod.storage.scripts.clear();
+			lumod.Lumod.cache.scripts.clear();
 			trace("cleared lumod cache");
 		}
 		#end
@@ -361,9 +416,9 @@ class TitleState extends MusicBeatState
 			Conductor.songPosition = FlxG.sound.music.time;
 		// FlxG.watch.addQuick('amp', FlxG.sound.music.amplitude);
 
-		var pressedEnter:Bool = FlxG.keys.justPressed.ENTER || controls.ACCEPT || FlxG.mouse.justPressed;
+		var pressedEnter:Bool = FlxG.keys.justPressed.ENTER #if desktop || controls.ACCEPT #end || FlxG.mouse.justPressed;
 
-		#if mobile
+		#if FLX_TOUCH
 		for (touch in FlxG.touches.list)
 		{
 			if (touch.justPressed)
@@ -492,6 +547,7 @@ class TitleState extends MusicBeatState
 			skipIntro();
 		}
 
+		#if desktop
 		if (controls.RESET) {
 			FlxG.sound.music.stop();
 			playFreakyMusic();
@@ -502,6 +558,26 @@ class TitleState extends MusicBeatState
 			if(controls.UI_LEFT) swagShader.hue -= elapsed * 0.1;
 			if(controls.UI_RIGHT) swagShader.hue += elapsed * 0.1;
 		}
+		#end
+
+		#if RESULTS_TEST
+		if (FlxG.keys.justPressed.F1) {
+			FlxG.switchState(() -> new online.states.ResultsSoloState({
+				hitNotes: FlxG.random.int(5, 2000),
+				combo: FlxG.random.int(5, 2000),
+				sicks: FlxG.random.int(5, 1000),
+				goods: FlxG.random.int(0, 500),
+				bads: FlxG.random.int(0, 250),
+				shits: FlxG.random.int(0, 100),
+				misses: FlxG.random.int(0, 50),
+				score: FlxG.random.int(5, 999999999),
+				accuracy: 1, //FlxG.random.float(0, 1),
+				character: (ClientPrefs.data.modSkin ?? [])[1],
+				difficultyName: 'nightmare',
+				points: FlxG.random.int(0, 100)
+			}));
+		}
+		#end
 
 		#if RESULTS_TEST
 		if (FlxG.keys.justPressed.F1) {
@@ -577,6 +653,7 @@ class TitleState extends MusicBeatState
 		}
 
 		if(!closedState) {
+			if (event("onPreIntroStarted", new CancellableEvent()).cancelled) return;
 			sickBeats++;
 			switch (sickBeats)
 			{
@@ -642,6 +719,7 @@ class TitleState extends MusicBeatState
 					addMoreText('Funkin'); // credTextShit.text += '\nFunkin';
 
 				case 17:
+					if (event("onPreIntroFinished", new CancellableEvent()).cancelled) return;
 					skipIntro();
 			}
 		}
@@ -651,6 +729,7 @@ class TitleState extends MusicBeatState
 	var increaseVolume:Bool = false;
 	function skipIntro():Void
 	{
+		if (event("onSkipIntro", new CancellableEvent()).cancelled) return;
 		if (!skippedIntro)
 		{
 			if (playJingle) //Ignore deez

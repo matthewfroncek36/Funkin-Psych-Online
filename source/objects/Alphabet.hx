@@ -302,6 +302,9 @@ class AlphaCharacter extends FlxSprite
 		's'  => null, 't'  => null, 'u'  => null, 'v'  => null, 'w'  => null, 'x'  => null,
 		'y'  => null, 'z'  => null,
 
+		//turkish alphabet things
+		'ğ' => null, 'ş' => null, 'ı' => null,
+
 		//additional alphabet
 		'á'  => null, 'é'  => null, 'í'  => null, 'ó'  => null, 'ú'  => null,
 		'à'  => null, 'è'  => null, 'ì'  => null, 'ò'  => null, 'ù'  => null,
@@ -388,7 +391,8 @@ class AlphaCharacter extends FlxSprite
 			this.character = character;
 			curLetter = null;
 			var lowercase:String = this.character.toLowerCase();
-			if(allLetters.exists(lowercase)) curLetter = allLetters.get(lowercase);
+			if(allLetters.exists(this.character)) curLetter = allLetters.get(this.character);
+			else if(allLetters.exists(lowercase)) curLetter = allLetters.get(lowercase);
 			else curLetter = allLetters.get('?');
 
 			var suffix:String = '';
@@ -403,7 +407,15 @@ class AlphaCharacter extends FlxSprite
 				}
 				else suffix = ' normal';
 			}
-			else suffix = ' bold';
+			else {
+				if (ClientPrefs.data.lang == "TR") {
+					if(this.character == 'İ')
+						lowercase = 'i';
+					else if(this.character == 'I')
+						lowercase = 'ı';
+				}
+				suffix = ' bold';
+			}
 
 			var alphaAnim:String = lowercase;
 			if(curLetter != null && curLetter.anim != null) alphaAnim = curLetter.anim;
@@ -429,7 +441,11 @@ class AlphaCharacter extends FlxSprite
 			|| (ascii >= 97 && ascii <= 122)
 			|| (ascii >= 192 && ascii <= 214)
 			|| (ascii >= 216 && ascii <= 246)
-			|| (ascii >= 248 && ascii <= 255);
+			|| (ascii >= 248 && ascii <= 255)
+			|| (ascii == 286 || ascii == 287) // Ğ, ğ
+			|| (ascii == 304 || ascii == 305) // İ, ı
+			|| (ascii == 350 || ascii == 351) // Ş, ş
+			|| (ascii == 199 || ascii == 231); // Ç, ç
 	}
 
 	private function set_image(name:String)

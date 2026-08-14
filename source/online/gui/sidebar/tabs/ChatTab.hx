@@ -12,10 +12,6 @@ class ChatTab extends TabSprite {
 		tabWidth = 500;
 	}
 
-	override function get_locked():Bool {
-		return !online.network.FunkinNetwork.loggedIn;
-	}
-
 	override function create() {
 		super.create();
 

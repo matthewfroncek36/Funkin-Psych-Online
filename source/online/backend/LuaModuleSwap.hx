@@ -73,7 +73,7 @@ class LuaModuleSwap {
 				return Sys.getEnv(varname);
 			},
 			remove: function(filename:String) {
-				return File.getContent(filePath(filename));
+				return FunkinFileSystem.getText(filePath(filename));
 			},
 			rename: function(oldname:String, newname:String) {
 				FileSystem.rename(filePath(oldname), filePath(newname));
@@ -401,7 +401,7 @@ class LuaModuleSwap {
 			return;
 		}
 
-		Convert.enableUnsupportedTraces = true;
+		// Convert.enableUnsupportedTraces = true; // Not available in linc_luajit 0.0.7
 		Convert.toLua(lua, value);
 		Lua.setglobal(lua, name);
 	}

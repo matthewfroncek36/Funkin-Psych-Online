@@ -75,7 +75,6 @@ class FranksSpiritsBowling extends BaseStage {
 
 			tankmanEnd = new FlxAnimate(778, 513);
 			tankmanEnd.antialiasing = ClientPrefs.data.antialiasing;
-			tankmanEnd.applyStageMatrix = true;
 			Paths.loadAnimateAtlas(tankmanEnd, 'erect/cutscene/tankmanEnding');
 			tankmanEnd.anim.addBySymbol('scene', 'tankman stress ending', 24, false);
 			if(ClientPrefs.data.shaders)
@@ -124,9 +123,7 @@ class FranksSpiritsBowling extends BaseStage {
 							tankBih.resetShit(500, 290, TankmenBG.animationNotes[i][1] < 2);
 							tankBih.scale.set(1.1, 1.1);
 							tankBih.updateHitbox();
-							if (ClientPrefs.data.shaders) {
-								tankBih.shader = tankrunShader.shader;
-							}
+							tankBih.shader = tankrunShader.shader;
 							tankmanRun.add(tankBih);
 						}
 					}
@@ -140,24 +137,19 @@ class FranksSpiritsBowling extends BaseStage {
 				if(!Std.isOfType(character, objects.Character))
 					continue;
 
-				var char = cast(character, objects.Character);
-
 				var rim:DropShadow = new DropShadow();
 				rim.setAdjustColor(-46, -38, -25, -20);
 				rim.color = 0xFFDFEF3C;
-				rim.attachedSprite = char;
+				rim.attachedSprite = character;
 
 				rim.angle = 90;
-				char.shader = rim.shader;
-				
-				if(char.isAnimateAtlas)
-					char.atlas.useRenderTexture = true;
+				character.shader = rim.shader;
 
-				char.animation.callback = function(name:String, frameNumber:Int, frameIndex:Int) {
+				character.animation.callback = function(name:String, frameNumber:Int, frameIndex:Int) {
 					if(name.endsWith('-bloody'))
 						rim.useAltMask = true;
 
-					rim.updateFrameInfo(char.frame);
+					rim.updateFrameInfo(character.frame);
 				};
 			}
 
@@ -165,21 +157,16 @@ class FranksSpiritsBowling extends BaseStage {
 				if(!Std.isOfType(character, objects.Character))
 					continue;
 
-				var char = cast(character, objects.Character);
-
 				var rim:DropShadow = new DropShadow();
 				rim.setAdjustColor(-46, -38, -25, -20);
 				rim.color = 0xFFDFEF3C;
-				rim.attachedSprite = char;
+				rim.attachedSprite = character;
 
 				rim.angle = 90;
-				char.shader = rim.shader;
+				character.shader = rim.shader;
 
-				if(char.isAnimateAtlas)
-					char.atlas.useRenderTexture = true;
-
-				char.animation.callback = function(name:String, frameNumber:Int, frameIndex:Int) {
-					rim.updateFrameInfo(char.frame);
+				character.animation.callback = function(name:String, frameNumber:Int, frameIndex:Int) {
+					rim.updateFrameInfo(character.frame);
 				};
 			}
 
@@ -187,21 +174,16 @@ class FranksSpiritsBowling extends BaseStage {
 				if(!Std.isOfType(character, objects.Character))
 					continue;
 
-				var char = cast(character, objects.Character);
-
 				var rim:DropShadow = new DropShadow();
 				rim.setAdjustColor(-46, -38, -25, -20);
 				rim.color = 0xFFDFEF3C;
-				rim.attachedSprite = char;
+				rim.attachedSprite = character;
 
 				rim.angle = 135;
 				rim.threshold = 0.3;
-				char.shader = rim.shader;
+				character.shader = rim.shader;
 
-				if(char.isAnimateAtlas)
-					char.atlas.useRenderTexture = true;
-
-				switch(char?.curCharacter) {
+				switch(cast(character, objects.Character)?.curCharacter) {
 					case 'tankman-bloody':
 						rim.loadAltMask('erect/masks/tankmanCaptainBloody_mask');
 				}
@@ -209,8 +191,8 @@ class FranksSpiritsBowling extends BaseStage {
 				rim.maskThreshold = 1;
 				rim.useAltMask = false;
 
-				char.animation.callback = function(name:String, frameNumber:Int, frameIndex:Int) {
-					rim.updateFrameInfo(char.frame);
+				character.animation.callback = function(name:String, frameNumber:Int, frameIndex:Int) {
+					rim.updateFrameInfo(character.frame);
 				};
 			}
 		}
@@ -219,7 +201,8 @@ class FranksSpiritsBowling extends BaseStage {
 	override function update(elapsed:Float) {
 		@:privateAccess
 		if (rimlightCamera != null) {
-			rimlightCamera.scroll.copyFrom(game.camGame.scroll);
+			rimlightCamera.scroll.x = game.camGame.scroll.x;
+			rimlightCamera.scroll.y = game.camGame.scroll.y;
 			rimlightCamera.zoom = game.camGame.zoom;
 		}
 	}

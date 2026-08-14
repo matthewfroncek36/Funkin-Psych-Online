@@ -140,17 +140,16 @@ class ResultsSoloState extends MusicBeatState {
 				switch (imageData.renderType) {
 					case 'animateatlas':
 						var coolAssAnim:FlxAnimate = new FlxAnimate(imageData.offsets[0], imageData.offsets[1]);
-						coolAssAnim.applyStageMatrix = true;
 						Paths.loadAnimateAtlas(coolAssAnim, imageData.assetPath);
 						if (imageData.scale != null)
 							coolAssAnim.scale.set(imageData.scale, imageData.scale);
 						coolAssAnim.visible = false;
 						coolAssAnim.anim.onComplete.add(() -> {
 							if (imageData.loopFrameLabel != null)
-								coolAssAnim.anim.curFrame = imageData.loopFrameLabel;
+								coolAssAnim.anim.goToFrameLabel(imageData.loopFrameLabel);
 
 							if (imageData.loopFrame != null)
-								coolAssAnim.anim.play("", true, false, imageData.loopFrame);
+								coolAssAnim.anim.play(null, true, false, imageData.loopFrame);
 						});
 						charAnimates.push(coolAssAnim);
 						charAnimatesDelay.push(imageData?.delay ?? 0);
@@ -340,8 +339,7 @@ class ResultsSoloState extends MusicBeatState {
 							for (i => sprite in charAnimates) {
 								FlxTimer.wait(charAnimatesDelay[i], () -> {
 									sprite.visible = true;
-									sprite.anim.addByFrameLabel("", "", 24, false);
-									sprite.anim.play("");
+									sprite.anim.play();
 								});
 							}
 							for (i => sprite in charSprites) {
@@ -425,7 +423,7 @@ class ResultsSoloState extends MusicBeatState {
 			songText.setPosition(FlxG.width, 85);
 		}
 
-		if (FlxG.sound.music != null && !exiting && (controls.ACCEPT || controls.BACK)) {
+		if (FlxG.sound.music != null && !exiting && (controls.ACCEPT || controls.BACK #if mobile || ScreenUtil.touch.justPressed #end)) {
 			exiting = true;
 			FlxTimer.globalManager.clear();
 			FlxTween.globalManager.clear();

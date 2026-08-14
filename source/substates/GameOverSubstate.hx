@@ -58,6 +58,7 @@ class GameOverSubstate extends MusicBeatSubstate
 
 	public function new(x:Float, y:Float, camX:Float, camY:Float, ?overCharacter:Character)
 	{
+		controls.isInSubstate = true;
 		super();
 
 		if (overCharacter == null || characterName != 'bf-dead') {
@@ -217,6 +218,8 @@ class GameOverSubstate extends MusicBeatSubstate
 		PlayState.instance.callOnScripts('onGameOverStart', []);
 
 		add(new online.objects.DebugPosHelper());
+		mobileManager.addMobilePad('NONE', 'A_B');
+		mobileManager.addMobilePadCamera();
 
 		super.create();
 	}
@@ -352,6 +355,7 @@ class GameOverSubstate extends MusicBeatSubstate
 
 	override function destroy()
 	{
+		controls.isInSubstate = false;
 		instance = null;
 		super.destroy();
 	}

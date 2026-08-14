@@ -28,7 +28,7 @@ class OnlineState extends MusicBeatState {
 		"MOD DOWNLOADER"
     ];
 
-	var presenceInfo:FlxText;
+	// var networkPlayer:FlxText;
 	// var networkBg:FlxSprite;
 	var itemDesc:FlxText;
 	var playersOnline:FlxText;
@@ -81,9 +81,9 @@ class OnlineState extends MusicBeatState {
 	function getItemName(item:String) {
 		if (curSelected == 0 && item == "JOIN" && inputWait)
 		{
-			return "JOIN CODE: " + inputString;
+			return Language.getText("JOIN CODE: ") + inputString;
 		}
-		return item;
+		return Language.getText(item);
 	}
 
     override function create() {
@@ -113,7 +113,6 @@ class OnlineState extends MusicBeatState {
 		OnlineMods.checkMods();
 
 		#if DISCORD_ALLOWED
-		DiscordClient.resetClientID();
 		DiscordClient.changePresence("In the Menus", "Online Menu");
 		#end
 
@@ -128,7 +127,7 @@ class OnlineState extends MusicBeatState {
 		warp.makeGraphic(FlxG.width, FlxG.height, FlxColor.TRANSPARENT);
 		warp.updateHitbox();
 		warp.screenCenter();
-		if (!ClientPrefs.data.lowQuality && ClientPrefs.data.shaders)
+		if (!ClientPrefs.data.lowQuality && !ClientPrefs.data.disableOnlineShaders)
 			add(new WarpEffect(warp));
 		warp.antialiasing = ClientPrefs.data.antialiasing;
 		add(warp);
@@ -181,8 +180,7 @@ class OnlineState extends MusicBeatState {
 		discord.x = 30;
 		discord.y = FlxG.height - discord.height - 30;
 		discord.alpha = 0.8;
-		if (!Main.UNOFFICIAL_BUILD)
-			add(discord);
+		add(discord);
 
 		github = new FlxSprite();
 		github.antialiasing = ClientPrefs.data.antialiasing;
@@ -195,8 +193,7 @@ class OnlineState extends MusicBeatState {
 		github.x = discord.x + discord.width + 20;
 		github.y = FlxG.height - github.height - 28;
 		github.alpha = 0.8;
-		if (!Main.UNOFFICIAL_BUILD)
-			add(github);
+		add(github);
 
 		if (twitterIsDead) {
 			bsky = new FlxSprite();
@@ -209,8 +206,7 @@ class OnlineState extends MusicBeatState {
 			bsky.x = github.x + github.width + 20;
 			bsky.y = FlxG.height - bsky.height - 28;
 			bsky.alpha = 0.8;
-			if (!Main.UNOFFICIAL_BUILD)
-				add(bsky);
+			add(bsky);
 		}
 		else {
 			twitter = new FlxSprite();
@@ -223,8 +219,7 @@ class OnlineState extends MusicBeatState {
 			twitter.x = github.x + github.width + 20;
 			twitter.y = FlxG.height - twitter.height - 28;
 			twitter.alpha = 0.8;
-			if (!Main.UNOFFICIAL_BUILD)
-				add(twitter);
+			add(twitter);
 		}
 
 		var microblog = (twitterIsDead ? bsky : twitter);
@@ -237,7 +232,7 @@ class OnlineState extends MusicBeatState {
 		playersOnline = new FlxText(0, 100);
 		playersOnline.setFormat("VCR OSD Mono", 20, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		playersOnline.alpha = 0.7;
-		playersOnline.text = "Fetching...";
+		playersOnline.text = Language.getText("Fetching...");
 		playersOnline.screenCenter(X);
 		add(playersOnline);
 
@@ -260,15 +255,14 @@ class OnlineState extends MusicBeatState {
 		// networkBg.alpha = 0.6;
 		// add(networkBg);
 
-		if (!FunkinNetwork.loggedIn) {
-			presenceInfo = new FlxText(0, 30);
-			presenceInfo.setFormat("VCR OSD Mono", 16, FlxColor.WHITE, RIGHT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-			presenceInfo.alpha = 0.1;
-			presenceInfo.text = "Not logged in!\n\nCheck OPTIONS to login!";
-			presenceInfo.x = FlxG.width - presenceInfo.width - 30;
-			add(presenceInfo);
-			FlxTween.tween(presenceInfo, {alpha: 0.7}, 1, {ease: FlxEase.quadInOut, type: PINGPONG});
-		}
+		// networkPlayer = new FlxText(30, 30);
+		// networkPlayer.setFormat("VCR OSD Mono", 16, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		// networkPlayer.alpha = 0.5;
+		// networkPlayer.text = FunkinNetwork.loggedIn ? "Logged in as " + FunkinNetwork.nickname : "Not logged in";
+		// if (FunkinNetwork.loggedIn) {
+		// 	networkPlayer.text += "\nPoints:" + FunkinNetwork.points;
+		// }
+		// add(networkPlayer);
 
 		// networkBg.scale.set(networkPlayer.width + 20, networkPlayer.height + 20);
 		// networkBg.updateHitbox();
@@ -289,28 +283,23 @@ class OnlineState extends MusicBeatState {
 
 			if (FunkinNetwork.loggedIn)
 				Waiter.put(() -> {
-					if (FlxG.state != theus)
-						return;
-
 					var profileBox = new ProfileBox(FunkinNetwork.nickname, true);
 					profileBox.setPosition(FlxG.width - profileBox.width - 20, 20);
-					add(profileBox);
+					if (FlxG.state == theus)
+						add(profileBox);
 				});
 		});
 
 		Thread.run(() -> {
 			var data = FunkinNetwork.fetchFront();
 			Waiter.put(() -> {
-				if (FlxG.state != theus)
-					return;
-
 				if (data == null) {
-					playersOnline.text = "NETWORK OFFLINE";
-					presenceInfo.visible = false;
+					playersOnline.text = Language.getText("NETWORK OFFLINE");
+					// networkPlayer.visible = false;
 					// networkBg.visible = false;
 				}
 				else {
-					playersOnline.text = 'Players Online: ' + data.online;
+					playersOnline.text = Language.getText("Players Online: ") + data.online;
 					availableRooms.text = 'Available Rooms: ' + data.rooms;
 					frontMessage.text = data.sez;
 					frontMessage.y = FlxG.height - frontMessage.height - 20;
@@ -320,12 +309,14 @@ class OnlineState extends MusicBeatState {
 				availableRooms.screenCenter(X);
 			});
 		});
-
 		changeSelection(0);
 
 		FlxG.stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyDown);
 
 		FlxG.mouse.visible = true;
+		
+		mobileManager.addMobilePad('NONE', 'B');
+		mobileManager.addMobilePadCamera();
     }
 
 	override function destroy() {
@@ -376,22 +367,23 @@ class OnlineState extends MusicBeatState {
 				changeSelection(1);
 
 			if (controls.ACCEPT || (FlxG.mouse.justPressed && mouseInItems)) {
-				switch (itms[curSelected].toLowerCase()) {
-					case "join":
+				switch (itms[curSelected]) {
+					case "JOIN":
+						FlxG.stage.window.textInputEnabled = true;
 						inputWait = true;
-					case "find":
+					case "FIND":
 						disableInput = true;
 						// FlxG.openURL(GameClient.serverAddress + "/rooms");
 						FlxG.switchState(() -> new FindRoomState());
-					case "host":
+					case "HOST":
 						disableInput = true;
 						GameClient.createRoom(GameClient.serverAddress, onRoomJoin);
-					case "options":
+					case "OPTIONS":
 						disableInput = true;
 						FlxG.switchState(() -> new OnlineOptionsState());
-					case "leaderboard":
+					case "LEADERBOARD":
 						openSubState(new TopPlayerSubstate());
-					case "mod downloader":
+					case "MOD DOWNLOADER":
 						disableInput = true;
 						FlxG.switchState(() -> new DownloaderState());
 				}
@@ -418,7 +410,7 @@ class OnlineState extends MusicBeatState {
 					discord.animation.play("active");
 					discord.offset.set(2, 2);
 
-					itemDesc.text = "Join Psych Online Discord Server!";
+					itemDesc.text = Language.getText("Join Psych Online Discord Server!");
 					itemDesc.screenCenter(X);
 
 					if (FlxG.mouse.justPressed) {
@@ -435,7 +427,7 @@ class OnlineState extends MusicBeatState {
 					github.alpha = 1;
 					github.animation.play("active");
 
-					itemDesc.text = "Documentation, FAQ and the Source Code!";
+					itemDesc.text = Language.getText("Documentation, FAQ and the Source Code!");
 					itemDesc.screenCenter(X);
 
 					if (FlxG.mouse.justPressed) {
@@ -445,7 +437,7 @@ class OnlineState extends MusicBeatState {
 							case 'codeberg':
 								RequestSubstate.requestURL("https://codeberg.org/Snirozu/Funkin-Psych-Online/wiki", true);
 							default:
-								Alert.alert('Offline.');
+								Alert.alert(Language.getText('Offline.'));
 						}
 					}
 				}
@@ -459,7 +451,7 @@ class OnlineState extends MusicBeatState {
 						bsky.alpha = 1;
 						bsky.animation.play("active");
 
-						itemDesc.text = "Follow the official Psych Online Bluesky account!";
+						itemDesc.text = Language.getText("Follow the official Psych Online Bluesky account!");
 						itemDesc.screenCenter(X);
 
 						if (FlxG.mouse.justPressed) {
@@ -477,7 +469,7 @@ class OnlineState extends MusicBeatState {
 						twitter.animation.play("active");
 						twitter.offset.set(5, 5);
 
-						itemDesc.text = "Follow the official Psych Online Twitter account!";
+						itemDesc.text = Language.getText("Follow the official Psych Online Twitter account!");
 						itemDesc.screenCenter(X);
 
 						if (FlxG.mouse.justPressed) {
@@ -506,17 +498,17 @@ class OnlineState extends MusicBeatState {
 
 		switch (curSelected) {
 			case 0:
-				itemDesc.text = "Join a room using a room code";
+				itemDesc.text = Language.getText("Join a room using a room code");
 			case 1:
-				itemDesc.text = "Creates a room";
+				itemDesc.text = Language.getText("Creates a room");
 			case 2:
-				itemDesc.text = "Opens a list of all available public rooms";
+				itemDesc.text = Language.getText("Opens a list of all available public rooms");
 			case 3:
-				itemDesc.text = "Psych Online options, configure stuff here!";
+				itemDesc.text = Language.getText("Psych Online options, configure stuff here!");
 			case 4:
-				itemDesc.text = "The Funkin Points Leaderboard!";
+				itemDesc.text = Language.getText("The Funkin Points Leaderboard!");
 			case 5:
-				itemDesc.text = "Download mods from Gamebanana here!";
+				itemDesc.text = Language.getText("Download mods from Gamebanana here!");
 		}
 		itemDesc.screenCenter(X);
 
@@ -591,6 +583,7 @@ class OnlineState extends MusicBeatState {
 			switch (itms[curSelected].toLowerCase()) {
 				case "join":
 					disableInput = true;
+					FlxG.stage.window.textInputEnabled = false;
 					if (daCoomCode.toLowerCase() == "adachi") {
 						FlxG.sound.playMusic(Paths.sound('cabbage'));
 						var image = new FlxSprite().loadGraphic(Paths.image('unnamed_file_from_google'));
@@ -610,7 +603,7 @@ class OnlineState extends MusicBeatState {
 						add(ass);
 						
 						var video = new hxcodec.flixel.FlxVideo();
-						video.play(Paths.video('enables'));
+						video.playMP4(Paths.video('enables'));
 						video.onEndReached.add(function() {
 							video.dispose();
 
