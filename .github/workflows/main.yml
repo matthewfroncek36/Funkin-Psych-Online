@@ -41,7 +41,7 @@ jobs:
       - name: Install HMM dependencies
         run: |
           haxelib install hmm --quiet
-          haxelib run hmm install
+          haxelib run hmm install --skip-dependencies lime openfl flixel
 
       - name: Create Version Tag
         run: echo "${{ github.run_id }}" > VERSION
@@ -84,7 +84,7 @@ jobs:
       - name: Install HMM dependencies
         run: |
           haxelib install hmm --quiet
-          haxelib run hmm install
+          haxelib run hmm install --skip-dependencies lime openfl flixel
         shell: cmd
 
       - name: Create Version Tag
@@ -128,7 +128,7 @@ jobs:
       - name: Install HMM dependencies
         run: |
           haxelib install hmm --quiet
-          haxelib run hmm install
+          haxelib run hmm install --skip-dependencies lime openfl flixel
 
       - name: Create Version Tag
         run: echo "${{ github.run_id }}" > VERSION
